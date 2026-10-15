@@ -1,0 +1,148 @@
+<section class="doc-hero">
+  <span class="eyebrow">Privacy policy</span>
+  <h1 class="title-large">Checkout Capture privacy policy</h1>
+  <p class="subtitle">How the Checkout Capture Shopify app collects, uses, shares and deletes data — for the merchants who install it and the shoppers in their stores.</p>
+  <p class="doc-meta">Effective {{EFFECTIVE_DATE}}</p>
+</section>
+
+<div class="doc-layout">
+  <nav class="doc-toc" aria-label="On this page">
+    <a href="#who">1. Who we are</a>
+    <a href="#roles">2. Our role</a>
+    <a href="#merchant-data">3. Data about merchants</a>
+    <a href="#shopper-data">4. Data about shoppers</a>
+    <a href="#browser">5. Cookies and browser storage</a>
+    <a href="#use">6. How data is used</a>
+    <a href="#sharing">7. Sharing</a>
+    <a href="#processors">8. Service providers</a>
+    <a href="#retention">9. Retention and deletion</a>
+    <a href="#rights">10. Your rights</a>
+    <a href="#security">11. Security</a>
+    <a href="#transfers">12. International transfers</a>
+    <a href="#children">13. Children</a>
+    <a href="#changes">14. Changes</a>
+    <a href="#contact">15. Contact</a>
+  </nav>
+  <div class="doc-body">
+    <section id="who">
+      <h2>1. Who we are</h2>
+      <p>Checkout Capture (“the app”) is a Shopify app operated by {{LEGAL_NAME}}, {{LEGAL_ADDRESS}} (“we”, “us”). This policy applies only to the app, its embedded admin screens, its storefront script and this website section. Contact: <a class="inline" href="mailto:{{SUPPORT_EMAIL}}">{{SUPPORT_EMAIL}}</a>.</p>
+    </section>
+
+    <section id="roles">
+      <h2>2. Our role</h2>
+      <p>For data about the merchants who install the app, we are the controller. For data about shoppers in a merchant's store, the merchant is the controller and we process that data on the merchant's behalf and on their instructions — the settings they choose in the app. Merchants are responsible for telling their shoppers about this processing in their own privacy notice and for having a valid basis for it, including marketing consent where the law requires it.</p>
+    </section>
+
+    <section id="merchant-data">
+      <h2>3. Data about merchants</h2>
+      <p>When a store installs the app, we receive and store:</p>
+      <ul>
+        <li>The store's name, <code>.myshopify.com</code> domain and storefront domain</li>
+        <li>Access tokens issued by Shopify for the permissions the merchant approved (stored encrypted)</li>
+        <li>The app settings the merchant chooses, including an optional webhook URL</li>
+        <li>Billing status of the app subscription, as reported by Shopify (we never see payment card details)</li>
+        <li>Usage records: the checkouts the app created, used to calculate the plan</li>
+      </ul>
+    </section>
+
+    <section id="shopper-data">
+      <h2>4. Data about shoppers</h2>
+      <p>Depending on the merchant's settings, the app collects, when a shopper provides it or arrives with it:</p>
+      <ul>
+        <li><strong>Contact details:</strong> email address, and if the merchant shows those fields, name, phone number and birthday</li>
+        <li><strong>Consent choices:</strong> whether the shopper agreed to email or SMS marketing</li>
+        <li><strong>How they were recognised:</strong> the popup, a link containing their email, or a form on the store</li>
+        <li><strong>Cart details:</strong> cart token, products, quantities, prices, total and currency</li>
+        <li><strong>Technical data:</strong> the page address, browser language, IP address and browser user agent</li>
+        <li><strong>Order details:</strong> for orders placed by shoppers the app captured — order number, email, total and currency, received from Shopify</li>
+      </ul>
+      <p>The app does not collect payment information, passwords or any data from Shopify's checkout pages.</p>
+    </section>
+
+    <section id="browser">
+      <h2>5. Cookies and browser storage</h2>
+      <p>On the merchant's storefront, the app stores in the shopper's browser:</p>
+      <table>
+        <tr><th>Name</th><th>Type</th><th>Purpose</th><th>Duration</th></tr>
+        <tr><td><code>cc_details</code></td><td>First-party cookie</td><td>Remembers the shopper's email so they aren't asked again</td><td>180 days</td></tr>
+        <tr><td><code>checkoutCapture:v1</code></td><td>localStorage</td><td>The details the shopper entered, for the same purpose</td><td>Until cleared</td></tr>
+        <tr><td><code>checkoutCapture:config:*</code>, <code>checkoutCapture:cartSig</code></td><td>sessionStorage</td><td>The app's settings and a fingerprint of the cart, to avoid repeated requests</td><td>Browser session</td></tr>
+      </table>
+      <p>These are used only to provide the app's function in that store. They are not used for advertising or to track shoppers across stores.</p>
+    </section>
+
+    <section id="use">
+      <h2>6. How data is used</h2>
+      <ul>
+        <li>To attach the shopper's email to their cart, so Shopify's checkout opens with it filled in</li>
+        <li>To show the merchant their leads, abandoned carts, checkouts created and orders received</li>
+        <li>To detect abandoned carts and hand them to the tools the merchant chose (see Sharing)</li>
+        <li>To calculate usage for billing</li>
+        <li>To keep the service secure, prevent abuse and fix problems</li>
+      </ul>
+      <p>We do not sell personal data, use it for our own marketing, or use shoppers' data to send them messages. We do not use it to train machine-learning models.</p>
+    </section>
+
+    <section id="sharing">
+      <h2>7. Sharing</h2>
+      <p>Shopper data is shared only as needed to provide the app, and only as the merchant configures it:</p>
+      <ul>
+        <li><strong>Shopify:</strong> the email (and name and phone, if collected) is written to the shopper's cart; abandoned carts can be sent to Shopify Flow, which may create or update the shopper as a customer in the merchant's store, subscribed to email marketing only if the shopper opted in.</li>
+        <li><strong>The merchant's webhook:</strong> if the merchant sets one, abandoned carts are sent to that address. The merchant is responsible for the service at that address.</li>
+        <li><strong>Klaviyo or Omnisend:</strong> if the merchant turns this on and runs those tools, the shopper's email is passed to them in the browser so they can recognise the shopper.</li>
+        <li><strong>Legal reasons:</strong> when required by law, or to protect rights, safety and the integrity of the service.</li>
+      </ul>
+    </section>
+
+    <section id="processors">
+      <h2>8. Service providers</h2>
+      <table>
+        <tr><th>Provider</th><th>What they do</th><th>Location</th></tr>
+        <tr><td>Railway Corporation</td><td>Hosts the app's servers and database</td><td>United States</td></tr>
+        <tr><td>Shopify Inc.</td><td>Platform, app installation, billing and the storefront content delivery network</td><td>Canada and worldwide</td></tr>
+      </table>
+    </section>
+
+    <section id="retention">
+      <h2>9. Retention and deletion</h2>
+      <ul>
+        <li>Shopper data is kept while the merchant uses the app, so the merchant can see and export it.</li>
+        <li>When a store uninstalls the app, its access ends immediately. Shopify sends a <code>shop/redact</code> request 48 hours later, and we then delete all of that store's data — settings, leads, carts, usage and order records.</li>
+        <li>When a customer's data must be erased, Shopify sends a <code>customers/redact</code> request and we delete that shopper's leads, carts, usage and order records for that store.</li>
+        <li>When a customer asks for their data, Shopify sends a <code>customers/data_request</code> and we provide the data we hold about them to the merchant within 30 days.</li>
+        <li>Server logs are kept for up to 30 days.</li>
+      </ul>
+    </section>
+
+    <section id="rights">
+      <h2>10. Your rights</h2>
+      <p>Depending on where you live (for example under the GDPR, the UK GDPR, the CCPA or Israel's Privacy Protection Law), you may have the right to access, correct, delete or export your data, to object to or restrict its processing, and to withdraw consent. Shoppers: please contact the store you shopped at first — it controls your data and can send the request to us. Merchants: contact us at <a class="inline" href="mailto:{{SUPPORT_EMAIL}}">{{SUPPORT_EMAIL}}</a>. You may also complain to your local data protection authority.</p>
+    </section>
+
+    <section id="security">
+      <h2>11. Security</h2>
+      <p>Data travels over HTTPS. Shopify access tokens are encrypted at rest. Requests from the storefront are checked against the store's domains and rate-limited, Shopify webhooks are verified by signature, and the webhooks we send are signed with a per-store secret. Access to production systems is limited to the people who operate the app.</p>
+    </section>
+
+    <section id="transfers">
+      <h2>12. International transfers</h2>
+      <p>The app's servers are in the United States. Where data is transferred from the EEA, the UK or Switzerland, we rely on appropriate safeguards such as the European Commission's Standard Contractual Clauses.</p>
+    </section>
+
+    <section id="children">
+      <h2>13. Children</h2>
+      <p>The app is for businesses and is not directed at children. We do not knowingly collect data about children under 16.</p>
+    </section>
+
+    <section id="changes">
+      <h2>14. Changes</h2>
+      <p>We'll update this policy when the app changes how it handles data, and change the effective date above. Material changes will be announced to merchants in the app or by email.</p>
+    </section>
+
+    <section id="contact">
+      <h2>15. Contact</h2>
+      <p>{{LEGAL_NAME}}, {{LEGAL_ADDRESS}} · <a class="inline" href="mailto:{{SUPPORT_EMAIL}}">{{SUPPORT_EMAIL}}</a></p>
+    </section>
+  </div>
+</div>

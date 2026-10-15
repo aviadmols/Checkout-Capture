@@ -1,0 +1,160 @@
+<section class="doc-hero">
+  <span class="eyebrow">Documentation</span>
+  <h1 class="title-large">Set up Checkout Capture</h1>
+  <p class="subtitle">Everything the app does, in the order you'll set it up. Most stores are live in five minutes.</p>
+</section>
+
+<div class="doc-layout">
+  <nav class="doc-toc" aria-label="On this page">
+    <a href="#install">1. Install</a>
+    <a href="#embed">2. Turn on the app embed</a>
+    <a href="#mode">3. Choose how it works</a>
+    <a href="#popup">4. Design the popup</a>
+    <a href="#recognising">5. Recognise shoppers</a>
+    <a href="#abandoned-carts">6. Abandoned carts</a>
+    <a href="#webhook">7. Webhook reference</a>
+    <a href="#flow">8. Shopify Flow</a>
+    <a href="#billing">9. Billing and usage</a>
+    <a href="#data">10. Data and uninstalling</a>
+    <a href="#troubleshooting">Troubleshooting</a>
+  </nav>
+
+  <div class="doc-body">
+    <section id="install">
+      <h2>1. Install</h2>
+      <p>Install Checkout Capture from the Shopify App Store and approve the permissions. The app opens inside your Shopify admin on its <strong>Home</strong> screen, with a short setup checklist. There's nothing to configure on our side and no code to paste.</p>
+      <p>The app asks for these permissions, and uses them only for what's listed:</p>
+      <table>
+        <tr><th>Permission</th><th>Why</th></tr>
+        <tr><td>Read orders</td><td>To count the orders placed by shoppers the app captured, and show their revenue.</td></tr>
+        <tr><td>Read and write customers</td><td>Only for the Shopify Flow trigger: to find the shopper by email, or add them as a customer (subscribed to email marketing only if they opted in).</td></tr>
+        <tr><td>Storefront: read products and checkouts, write checkouts</td><td>To attach the shopper's email to their cart, so checkout opens with it filled in.</td></tr>
+      </table>
+    </section>
+
+    <section id="embed">
+      <h2>2. Turn on the app embed</h2>
+      <ol>
+        <li>On the app's Home screen, click <strong>Open theme editor</strong>. Or go to <em>Online Store → Themes → Customize → App embeds</em>.</li>
+        <li>Switch <strong>Checkout Capture</strong> on and click <strong>Save</strong>.</li>
+        <li>Back on Home, the first checklist step shows <strong>Live</strong> once your storefront has loaded the app.</li>
+      </ol>
+      <div class="callout"><p>The app embed works with every Online Store 2.0 theme. It doesn't run inside the theme editor, so editing your theme is never interrupted by the popup.</p></div>
+    </section>
+
+    <section id="mode">
+      <h2>3. Choose how it works</h2>
+      <p>In <strong>Settings → How it works</strong>, pick one mode:</p>
+      <table>
+        <tr><th>Mode</th><th>What shoppers see</th></tr>
+        <tr><td>Popup form</td><td>Shoppers we don't know yet get a short form when they click Checkout. Shoppers we already know go straight through.</td></tr>
+        <tr><td>Email from link only</td><td>No form at all. Shoppers who arrive from a link with their email (for example <code>?email=</code> in a campaign) are recognised; everyone else checks out untouched.</td></tr>
+        <tr><td>Off</td><td>The app steps aside completely.</td></tr>
+      </table>
+      <p>In every mode, logged-in customers never see a form, express checkout buttons (Shop Pay, Apple Pay, Google Pay) are not affected, and if the app can't load, checkout works exactly as before.</p>
+    </section>
+
+    <section id="popup">
+      <h2>4. Design the popup</h2>
+      <ul>
+        <li><strong>Layout:</strong> Classic (a centred card, a bottom sheet on mobile) or Split (your brand image beside the form, above it on mobile). Upload the image in <em>Content → Files</em> and paste its link.</li>
+        <li><strong>Button and panel colour:</strong> any hex colour.</li>
+        <li><strong>Language and texts:</strong> every text and field label can be translated. Choose left-to-right or right-to-left. <strong>Fill in English</strong> and <strong>Fill in Hebrew</strong> set all texts at once.</li>
+        <li><strong>Form fields:</strong> email (always on), full name, first name, last name, phone, birthday, email marketing consent and SMS marketing consent. Show, hide, require and reorder them. Consent boxes are never pre-ticked and can't be required.</li>
+        <li><strong>Behaviour:</strong> optionally let shoppers continue without filling the form.</li>
+      </ul>
+      <p>Click <strong>Preview popup</strong> to see it with your saved settings. Nothing is saved or sent in the preview.</p>
+    </section>
+
+    <section id="recognising">
+      <h2>5. Recognise shoppers</h2>
+      <h3>From your campaign links</h3>
+      <p>Add the shopper's email to any link to your store, using your email or SMS tool's merge tag:</p>
+      <pre><code>https://yourstore.com/?email={{ email }}</code></pre>
+      <p>The parameter name (<code>email</code>) can be changed in Settings. The email is saved, removed from the address bar immediately, and attached to the cart when the shopper checks out.</p>
+      <h3>From your store's own forms</h3>
+      <p>Turn on <strong>Pick up emails typed into your store's own forms</strong> to recognise shoppers who type their email into a newsletter, contact or account form. Off by default.</p>
+      <h3>Remembering the shopper</h3>
+      <p>A recognised shopper is remembered in their browser (localStorage and a first-party cookie named <code>cc_details</code>, for 180 days), so they aren't asked again on their next visit.</p>
+    </section>
+
+    <section id="abandoned-carts">
+      <h2>6. Abandoned carts</h2>
+      <p>Turn on <strong>Track abandoned carts of recognised shoppers</strong> and set the idle time (5 to 1,440 minutes, default 30). When a recognised shopper has products in the cart and stays idle that long without heading to checkout, the cart is marked abandoned. You'll find it under <strong>Abandoned carts</strong> with a <strong>recovery link</strong> that rebuilds the cart on any device and opens checkout with the email filled in.</p>
+      <div class="callout"><p>Checkout Capture never emails shoppers. Abandoned carts are handed to your own tools: Shopify Flow, a webhook, or Klaviyo and Omnisend.</p></div>
+      <h3>Klaviyo and Omnisend</h3>
+      <p>Turn on <strong>Identify recognised shoppers to Klaviyo / Omnisend</strong>. If either tool runs on your store, it's told who the shopper is, so its own abandoned-cart flows can run for shoppers who came from a link or a store form. Klaviyo may skip tracking for visitors in the EU and UK who haven't given cookie consent.</p>
+      <h3>Shopify's own abandoned checkouts</h3>
+      <p>Shopify creates an abandoned checkout only when a shopper reaches the checkout page. Because the app attaches the email before checkout, shoppers who reach checkout and leave can already have their email on that abandoned checkout.</p>
+    </section>
+
+    <section id="webhook">
+      <h2>7. Webhook reference</h2>
+      <p>Paste an <code>https://</code> URL in <strong>Send abandoned carts to (webhook URL)</strong>. Each abandoned cart is sent once as a <code>POST</code> with a JSON body. Use <strong>Send test webhook</strong> to send a sample (event <code>test</code>).</p>
+      <table>
+        <tr><th>Header</th><th>Value</th></tr>
+        <tr><td><code>X-Checkout-Capture-Event</code></td><td><code>cart.abandoned</code> or <code>test</code></td></tr>
+        <tr><td><code>X-Checkout-Capture-Signature</code></td><td><code>sha256=</code> + HMAC-SHA256 of the raw body, keyed with your signing secret (shown in Settings)</td></tr>
+      </table>
+      <pre><code>{
+  "event": "cart.abandoned",
+  "id": 42,
+  "shop": { "name": "Northwind Goods", "myshopify_domain": "northwind.myshopify.com", "storefront_domain": "northwind.com" },
+  "customer": { "email": "dana@example.com", "first_name": "Dana", "last_name": "Cohen", "phone": null,
+                "accepts_marketing": true, "accepts_sms": false },
+  "source": "url",
+  "cart": { "token": "c1-…", "currency": "USD", "total_price": 247, "total_price_cents": 24700, "item_count": 3,
+            "items": [{ "variant_id": 4410, "product_title": "Linen Overshirt", "variant_title": "Sand / M", "quantity": 2, "price": 89 }] },
+  "recovery_url": "https://northwind.com/cart/4410:2?checkout%5Bemail%5D=dana%40example.com",
+  "last_activity_at": "2026-10-15T10:00:00+00:00",
+  "abandoned_at": "2026-10-15T10:30:00+00:00"
+}</code></pre>
+      <p>Verify the signature before trusting a request (Node.js):</p>
+      <pre><code>const crypto = require('crypto');
+const expected = 'sha256=' + crypto.createHmac('sha256', SECRET).update(rawBody).digest('hex');
+const valid = crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(req.headers['x-checkout-capture-signature']));</code></pre>
+      <p>Check <code>customer.accepts_marketing</code> (or <code>accepts_sms</code>) before you send a marketing message. Each delivery is tried up to three times; failures are shown as <strong>Failed</strong> under Abandoned carts, where you can resend them.</p>
+    </section>
+
+    <section id="flow">
+      <h2>8. Shopify Flow</h2>
+      <p>Every abandoned cart also fires the <strong>Cart abandoned</strong> trigger in Shopify Flow, with a customer reference — so you can build a workflow with Shopify Email's <em>Send marketing email</em>, tag the customer, or call any other Flow action. The shopper is found by email, or added as a customer; they're subscribed to email marketing only if they ticked the consent box.</p>
+      <table>
+        <tr><th>Flow variable</th><th>Contents</th></tr>
+        <tr><td>Customer</td><td>The Shopify customer</td></tr>
+        <tr><td>Customer email</td><td>The shopper's email</td></tr>
+        <tr><td>Recovery url</td><td>Rebuilds the cart and opens checkout with the email filled in</td></tr>
+        <tr><td>Cart total, Currency</td><td>The cart's value</td></tr>
+        <tr><td>Products</td><td>For example “Linen Overshirt × 2, Canvas Tote × 1”</td></tr>
+        <tr><td>Source</td><td>How the shopper was recognised: <code>url</code>, <code>popup</code>, <code>form</code> or <code>customer</code></td></tr>
+      </table>
+    </section>
+
+    <section id="billing">
+      <h2>9. Billing and usage</h2>
+      <p>The first 50 checkouts in every 30-day billing cycle are free. Approve the plan on the app's Home screen to keep the app working past 50; Shopify then bills you, in USD, only in cycles that pass 50 checkouts: <strong>$14</strong> for 51 to 1,000 checkouts and <strong>$25</strong> in total above 1,000. A cycle never costs more than $25.</p>
+      <p>A <strong>checkout</strong> is one cart the app attached an email to and sent to checkout, counted once per cycle. Logged-in customers aren't counted. Without an approved plan, the app pauses once the free 50 are used, and your checkout keeps working as usual.</p>
+      <p>The Home screen shows this cycle's checkouts, your plan, the orders placed by shoppers the app captured, and their revenue.</p>
+    </section>
+
+    <section id="data">
+      <h2>10. Data and uninstalling</h2>
+      <p>Your leads are under <strong>Leads</strong>, with search, filters and CSV export. When you uninstall, the app stops immediately and its access to your store ends. Shopify asks us to erase your store's data 48 hours later, and we delete it then. Requests to view or erase a customer's data, sent through Shopify, are handled as described in the <a class="inline" href="{{SITE}}/privacy/">privacy policy</a>.</p>
+    </section>
+
+    <section id="troubleshooting">
+      <h2>Troubleshooting</h2>
+      <h3>The popup doesn't appear</h3>
+      <ul>
+        <li>Check that the app embed is on and saved (Home shows <strong>Live</strong>).</li>
+        <li>Check that the mode is <strong>Popup form</strong>.</li>
+        <li>You may already be recognised: open the store in a private window to test as a new shopper.</li>
+        <li>If your theme's checkout button is unusual, add its CSS selector under <strong>Extra checkout selectors</strong>.</li>
+      </ul>
+      <h3>The app paused</h3>
+      <p>You've used the free 50 checkouts this cycle. Approve the plan on Home to resume.</p>
+      <h3>Still stuck?</h3>
+      <p>Contact <a class="inline" href="{{SITE}}/support/">support</a> with your store's myshopify domain and what you see.</p>
+    </section>
+  </div>
+</div>

@@ -15,6 +15,10 @@ use Illuminate\Support\Facades\Route;
 Route::withoutMiddleware(PreventRequestForgery::class)->group(function () {
     Route::get('demo', [DemoStoreController::class, 'cart']);
     Route::get('demo/reset', [DemoStoreController::class, 'reset']);
+    // English sample store for marketing screenshots.
+    Route::get('demo/showcase', fn () => view('demo.showcase', [
+        'shop' => \App\Models\Shop::where('public_key', DemoStoreController::DEMO_KEY)->firstOrFail(),
+    ]));
     Route::get('cart.js', [DemoStoreController::class, 'cartJson']);
     Route::post('cart/update.js', [DemoStoreController::class, 'update']);
     Route::post('cart/add.js', [DemoStoreController::class, 'add']);

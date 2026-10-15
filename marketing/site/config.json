@@ -1,0 +1,54 @@
+{
+  "site": "https://lets.co.il/checkout-capture",
+  "asset": "https://checkout-capture-production.up.railway.app/marketing",
+  "install_url": "https://lets.co.il/checkout-capture/docs/#install",
+  "values": {
+    "EFFECTIVE_DATE": "October 15, 2026",
+    "SUPPORT_EMAIL": null,
+    "LEGAL_NAME": null,
+    "LEGAL_ADDRESS": null,
+    "GOVERNING_LAW": null,
+    "GOVERNING_COURTS": null
+  },
+  "pages": [
+    {
+      "slug": "checkout-capture",
+      "file": "landing.html",
+      "title": "Checkout Capture",
+      "seo_title": "Checkout Capture — capture emails before checkout on Shopify",
+      "seo_description": "A Shopify app that asks for the shopper's email when they click Checkout, recognises shoppers from your campaign links, and hands abandoned carts to Shopify Flow, webhooks, Klaviyo and Omnisend."
+    },
+    {
+      "slug": "docs",
+      "parent": "checkout-capture",
+      "file": "docs.html",
+      "title": "Checkout Capture — Documentation",
+      "seo_title": "Documentation — Checkout Capture for Shopify",
+      "seo_description": "Install Checkout Capture, turn on the app embed, design the popup, recognise shoppers from links and forms, and hand abandoned carts to Shopify Flow or a webhook."
+    },
+    {
+      "slug": "support",
+      "parent": "checkout-capture",
+      "file": "support.html",
+      "title": "Checkout Capture — Support",
+      "seo_title": "Support — Checkout Capture for Shopify",
+      "seo_description": "Get help with Checkout Capture: setup, billing and data requests. Answered within one business day."
+    },
+    {
+      "slug": "privacy",
+      "parent": "checkout-capture",
+      "file": "privacy.html",
+      "title": "Checkout Capture — Privacy policy",
+      "seo_title": "Privacy policy — Checkout Capture for Shopify",
+      "seo_description": "How the Checkout Capture Shopify app collects, uses, shares and deletes merchant and shopper data."
+    },
+    {
+      "slug": "terms",
+      "parent": "checkout-capture",
+      "file": "terms.html",
+      "title": "Checkout Capture — Terms of service",
+      "seo_title": "Terms of service — Checkout Capture for Shopify",
+      "seo_description": "The terms for merchants who install the Checkout Capture Shopify app: service, billing, responsibilities and liability."
+    }
+  ]
+}
