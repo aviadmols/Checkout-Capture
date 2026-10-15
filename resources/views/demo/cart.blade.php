@@ -37,6 +37,16 @@
         <a href="/checkout" class="btn btn--ghost" id="checkout-link">לתשלום (קישור)</a>
     </form>
 
+    <p><button type="button" class="btn btn--ghost" id="add-to-cart" onclick="fetch('/cart/add.js', { method: 'POST' }).then(() => location.reload())">הוספת שייק נוסף (AJAX)</button></p>
+
+    {{-- A theme newsletter form — form capture should pick the email up from here. --}}
+    <form class="actions" id="newsletter" onsubmit="event.preventDefault(); this.querySelector('p').textContent = 'נרשמת!';">
+        <label for="newsletter-email">הרשמה לניוזלטר</label>
+        <input type="email" id="newsletter-email" name="contact[email]" placeholder="you@example.com" style="padding:12px;font:inherit">
+        <button type="submit" class="btn btn--ghost">הרשמה</button>
+        <p></p>
+    </form>
+
     <p class="dev">
         Dev: <a href="/demo/reset">reset cart</a> ·
         <a href="#" onclick="CheckoutCapture.forget(); location.reload(); return false;">forget stored email</a> ·

@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 /*
  * Runs on every boot (docker/start.sh). Creates the first admin from ADMIN_EMAIL /
@@ -24,3 +25,5 @@ Artisan::command('app:ensure-admin', function () {
 
     $this->info($user->wasRecentlyCreated ? "Admin {$user->email} created." : "Admin {$user->email} already exists.");
 })->purpose('Create the first admin user from ADMIN_EMAIL / ADMIN_PASSWORD');
+
+Schedule::command('carts:detect-abandoned')->everyMinute()->withoutOverlapping();

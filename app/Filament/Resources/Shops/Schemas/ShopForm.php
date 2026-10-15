@@ -3,6 +3,10 @@
 namespace App\Filament\Resources\Shops\Schemas;
 
 use App\Models\Shop;
+use App\Support\UsagePlan;
+use Filament\Actions\Action;
+use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Support\Arr;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Radio;
@@ -36,6 +40,7 @@ class ShopForm
                             ->schema(self::popupTab())
                             ->visible(fn (Get $get) => $get('mode') === Shop::MODE_POPUP),
                         Tab::make('Install')->schema(self::installTab())->visibleOn('edit'),
+                        Tab::make('Usage')->schema(self::usageTab())->visibleOn('edit'),
                     ]),
             ]);
     }
@@ -89,6 +94,29 @@ class ShopForm
                         ->rule('regex:/^[A-Za-z0-9_\-\[\]]+$/')
                         ->maxLength(40),
                 ]),
+            Section::make('Recognising shoppers')
+                ->visible(fn (Get $get) => $get('mode') !== Shop::MODE_OFF)
+                ->columns(2)
+                ->schema([
+                    Toggle::make('settings.form_capture')
+                        ->label('Pick up emails typed into the store\'s own forms')
+                        ->helperText('Newsletter, contact or account forms. The email is saved in a cookie and as a lead, and attached at checkout.')
+                        ->default($d['form_capture'])
+                        ->columnSpanFull(),
+                    Toggle::make('settings.abandoned_carts')
+                        ->label('Track abandoned carts of recognised shoppers')
+                        ->helperText('When a shopper we know (from a link, the popup or a store form) has products in the cart and goes idle without heading to checkout, the cart is marked abandoned with a link that restores it.')
+                        ->default($d['abandoned_carts'])
+                        ->live(),
+                    TextInput::make('settings.abandon_after_minutes')
+                        ->label('Abandoned after (minutes idle)')
+                        ->numeric()
+                        ->integer()
+                        ->minValue(5)
+                        ->maxValue(1440)
+                        ->placeholder((string) $d['abandon_after_minutes'])
+                        ->visible(fn (Get $get) => (bool) $get('settings.abandoned_carts')),
+                ]),
             TagsInput::make('allowed_origins')
                 ->label('Storefront domains')
                 ->placeholder('mystore.co.il')
@@ -131,11 +159,26 @@ class ShopForm
                         ->columnSpanFull(),
                     ColorPicker::make('settings.accent_color')->label('Button and panel colour')->default($d['accent_color'])
                         ->rule('regex:/^#[0-9a-f]{3,8}$/i'),
-                    Select::make('settings.direction')
-                        ->label('Direction')
-                        ->options(['rtl' => 'Right to left (Hebrew)', 'ltr' => 'Left to right'])
+                ]),
+            Section::make('Language')
+                ->key('language')
+                ->description('Every text in the popup can be translated below. These buttons fill all texts and field labels at once — you can still edit them after.')
+                ->headerActions([
+                    Action::make('fillEnglish')
+                        ->label('Fill in English')
+                        ->color('gray')
+                        ->action(fn (Get $get, Set $set) => self::fillTexts($get, $set, 'en')),
+                    Action::make('fillHebrew')
+                        ->label('Fill in Hebrew')
+                        ->color('gray')
+                        ->action(fn (Get $get, Set $set) => self::fillTexts($get, $set, 'he')),
+                ])
+                ->schema([
+                    Radio::make('settings.direction')
+                        ->label('Text direction')
+                        ->options(['ltr' => 'Left to right (English, most languages)', 'rtl' => 'Right to left (Hebrew, Arabic)'])
                         ->default($d['direction'])
-                        ->selectablePlaceholder(false),
+                        ->inline(),
                 ]),
             Section::make('Fields')
                 ->description('Choose which fields appear, which are required, their labels and order (drag to reorder). Leave a label empty to use the default shown in grey.')
@@ -177,6 +220,7 @@ class ShopForm
                     Textarea::make('settings.subtitle')->label('Subtitle')->placeholder($d['subtitle'])->rows(2)->columnSpanFull(),
                     TextInput::make('settings.submit_label')->label('Submit button')->placeholder($d['submit_label']),
                     TextInput::make('settings.skip_label')->label('Skip link')->placeholder($d['skip_label']),
+                    TextInput::make('settings.close_label')->label('Close button (screen readers)')->placeholder($d['close_label']),
                     TextInput::make('settings.error_email')->label('Invalid email message')->placeholder($d['error_email']),
                     TextInput::make('settings.error_required')->label('Required field message')->placeholder($d['error_required']),
                     Textarea::make('settings.privacy_note')->label('Small print under the button')->rows(2)->columnSpanFull(),
@@ -209,6 +253,57 @@ class ShopForm
                 ->copyable()
                 ->visible(fn (?Shop $record) => $record && ! $record->isOff() && $record->resolvedSettings()['url_capture'])
                 ->columnSpanFull(),
+        ];
+    }
+
+    /** Fills every popup text and field label with the English defaults or the Hebrew preset. */
+    private static function fillTexts(Get $get, Set $set, string $language): void
+    {
+        $texts = $language === 'he'
+            ? Shop::HEBREW_TEXTS
+            : Arr::only(Shop::DEFAULT_SETTINGS, array_keys(Shop::HEBREW_TEXTS));
+
+        foreach ($texts as $key => $value) {
+            $set("settings.{$key}", $value);
+        }
+
+        $set('settings.fields', collect($get('settings.fields') ?? [])
+            ->map(fn (array $field) => [
+                ...$field,
+                'label' => $language === 'he' ? (Shop::HEBREW_FIELD_LABELS[$field['key']] ?? null) : null,
+            ])
+            ->all());
+    }
+
+    /**
+     * Checkouts created = activations: carts the module attached an email to on the way
+     * to checkout (one per cart per month; logged-in customers aren't counted).
+     */
+    private static function usageTab(): array
+    {
+        $tiers = collect(UsagePlan::TIERS)
+            ->map(fn (array $t, int $i) => $t['up_to']
+                ? ($i === 0 ? "up to {$t['up_to']}" : 'up to '.number_format($t['up_to']))." checkouts: {$t['name']} \${$t['price']}"
+                : 'above that: '."{$t['name']} \${$t['price']}")
+            ->implode(' · ');
+
+        $month = fn (int $monthsAgo) => [
+            TextEntry::make("usage_{$monthsAgo}_count")
+                ->label(now()->subMonthsNoOverflow($monthsAgo)->format('F Y').' — checkouts created')
+                ->state(fn (?Shop $record) => $record?->activationCount(UsagePlan::period(now()->subMonthsNoOverflow($monthsAgo))) ?? 0)
+                ->numeric(),
+            TextEntry::make("usage_{$monthsAgo}_plan")
+                ->label('Plan')
+                ->state(fn (?Shop $record) => UsagePlan::label($record?->activationCount(UsagePlan::period(now()->subMonthsNoOverflow($monthsAgo))) ?? 0))
+                ->badge(),
+        ];
+
+        return [
+            Grid::make(2)->schema([...$month(0), ...$month(1)]),
+            TextEntry::make('pricing')
+                ->label('Pricing')
+                ->state($tiers)
+                ->helperText('A checkout counts once per cart per month, when the module attached an email and sent the shopper to checkout. Logged-in customers are not counted.'),
         ];
     }
 

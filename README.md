@@ -17,7 +17,16 @@ Each shop chooses **how it works** (Shops → Store tab):
 | Email from link only | No form at all. A shopper who arrives with `?email=…` (a campaign link, for example) is saved as a lead, and the email is attached to the cart at checkout. Everyone else checks out untouched. |
 | Off | The widget does nothing. |
 
+The shopper is also recognised in two more ways, each one a per-shop toggle under **Recognising shoppers**:
+
+- **Store forms (off by default):** an email typed into one of the store's own forms (newsletter, contact, account) is picked up when the field changes or the form is submitted. Lead source: `form`.
+- **Abandoned carts (off by default):** when a shopper we know (from a link, the popup or a store form) has products in the cart and stays idle for the shop's set time (default 30 minutes) without heading to checkout, the cart is marked abandoned. The widget reports cart changes (`/cart/add`, `/cart/change`, …) and page views to `POST /api/v1/carts`. The scheduler (`carts:detect-abandoned`, every minute) marks idle carts and fires a `CartAbandoned` event. **Abandoned carts** in the admin lists them with a recovery link: a Shopify cart permalink that rebuilds the cart and opens checkout with the email filled in. Shopify only creates its own abandoned checkout when a shopper reaches checkout, so these carts are tracked here. Sending the recovery message is not wired yet.
+
+Known details are kept in localStorage and in a first-party cookie (`cc_details`, 180 days, SameSite=Lax), so a shopper is still recognised after localStorage is cleared.
+
 The link parameter defaults to `email` and can be changed per shop. Once the email is read, the widget removes it from the address bar so it doesn't reach analytics or shared links. Each lead records its `source`: `popup` or `url`.
+
+**Language:** the popup defaults to English and left-to-right. Every text and field label can be edited, the direction (LTR or RTL) is a setting, and **Fill in English** / **Fill in Hebrew** fill everything at once. Shops created before English became the default kept their Hebrew texts (migration `2026_10_15_130000`).
 
 **Popup:** the Popup tab offers two designs. **Classic** is a centred card (a bottom sheet on mobile). **Split** puts a brand image beside the form (above it on mobile); without an image, the panel shows the title in large type. The field list sets which fields appear, which are required, their labels and their order. Available fields: email (always on), full name, first name, last name, phone, birthday, email marketing consent and SMS marketing consent. Consent boxes can never be required. **Preview popup** on the shop page shows the saved settings in either design, and nothing is saved or sent.
 
@@ -99,6 +108,18 @@ The widget dispatches these DOM events for analytics: `checkout-capture:open`, `
 | GET | `/preview/{shop}` | Admin only. Popup preview with the saved settings; `?design=classic\|split` overrides the design. |
 
 Each shop stores one row per email. A repeat submission bumps `submissions_count` and refreshes the cart snapshot. It never clears data or revokes consent. `source` keeps how the lead was first captured.
+
+## Pricing
+
+Billing is by **checkouts created** (activations) per calendar month. An activation is one cart the module attached an email to before sending the shopper to checkout. Each cart counts once a month; logged-in customers aren't counted. The widget reports activations to `POST /api/v1/activations`.
+
+| Checkouts in the month | Plan | Price |
+|---|---|---|
+| 0–50 | Free | $0 |
+| 51–1,000 | Growth | $14 |
+| 1,001+ | Pro | $25 |
+
+Tiers live in `App\Support\UsagePlan`. Each shop's **Usage** tab shows this month and last month. Charging isn't connected yet; it needs the Shopify Billing API, which requires installing the app through Shopify (OAuth). Planned next: count the orders actually placed, through an `orders/create` webhook.
 
 ## Known limits
 

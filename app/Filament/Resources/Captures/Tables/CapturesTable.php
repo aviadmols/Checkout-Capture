@@ -36,8 +36,16 @@ class CapturesTable
                     ->toggleable(),
                 TextColumn::make('source')
                     ->badge()
-                    ->formatStateUsing(fn (string $state) => $state === 'url' ? 'Link' : 'Popup')
-                    ->color(fn (string $state) => $state === 'url' ? 'info' : 'gray'),
+                    ->formatStateUsing(fn (string $state) => match ($state) {
+                        'url' => 'Link',
+                        'form' => 'Store form',
+                        default => 'Popup',
+                    })
+                    ->color(fn (string $state) => match ($state) {
+                        'url' => 'info',
+                        'form' => 'success',
+                        default => 'gray',
+                    }),
                 IconColumn::make('accepts_marketing')
                     ->label('Email opt-in')
                     ->boolean(),
@@ -73,7 +81,7 @@ class CapturesTable
                 SelectFilter::make('shop')
                     ->relationship('shop', 'name'),
                 SelectFilter::make('source')
-                    ->options(['popup' => 'Popup', 'url' => 'Link']),
+                    ->options(['popup' => 'Popup', 'url' => 'Link', 'form' => 'Store form']),
                 TernaryFilter::make('accepts_marketing')
                     ->label('Email opt-in'),
                 TernaryFilter::make('accepts_sms')

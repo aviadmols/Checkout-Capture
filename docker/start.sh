@@ -19,4 +19,7 @@ done
 
 php artisan app:ensure-admin || echo "admin bootstrap skipped" >&2
 
+# Scheduler (abandoned-cart detection, every minute) runs alongside the web server.
+php artisan schedule:work &
+
 exec frankenphp run --config /app/docker/Caddyfile

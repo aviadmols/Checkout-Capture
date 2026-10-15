@@ -15,6 +15,7 @@ Route::withoutMiddleware(PreventRequestForgery::class)->group(function () {
     Route::get('demo/reset', [DemoStoreController::class, 'reset']);
     Route::get('cart.js', [DemoStoreController::class, 'cartJson']);
     Route::post('cart/update.js', [DemoStoreController::class, 'update']);
+    Route::post('cart/add.js', [DemoStoreController::class, 'add']);
     Route::post('cart', [DemoStoreController::class, 'submit']);
     Route::get('checkout', [DemoStoreController::class, 'checkout']);
     Route::post('api/{version}/graphql.json', [DemoStoreController::class, 'graphql']);

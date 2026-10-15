@@ -27,6 +27,14 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(600)->by('key:'.$request->input('key')),
         ]);
 
+        // Activations drive billing, so one visitor can't inflate a shop's count much.
+        RateLimiter::for('activations', fn (Request $request) => [
+            Limit::perMinute(10)->by('ip:'.$request->ip()),
+            Limit::perDay(100)->by('ip-day:'.$request->ip()),
+        ]);
+
+        RateLimiter::for('carts', fn (Request $request) => Limit::perMinute(30)->by('ip:'.$request->ip()));
+
         RateLimiter::for('widget-config', fn (Request $request) => Limit::perMinute(120)->by($request->ip()));
     }
 }

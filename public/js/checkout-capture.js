@@ -43,27 +43,34 @@
   // Mirrors Shop::DEFAULT_SETTINGS / Shop::FIELDS so the popup still works if the config call fails.
   const DEFAULT_SETTINGS = {
     design: 'classic',
-    direction: 'rtl',
+    direction: 'ltr',
     eyebrow: '',
-    title: 'רגע לפני התשלום',
-    subtitle: 'השאירו מייל ונשמור לכם את העגלה — כדי שלא תאבדו אותה בדרך.',
+    title: 'Before you check out',
+    subtitle: 'Leave your email and we\'ll save your cart, so you don\'t lose it on the way.',
     image_url: '',
-    submit_label: 'המשך לתשלום',
-    skip_label: 'המשך בלי למלא',
+    submit_label: 'Continue to checkout',
+    skip_label: 'Continue without filling',
+    close_label: 'Close',
     privacy_note: '',
-    error_email: 'נא להזין כתובת מייל תקינה',
-    error_required: 'שדה חובה',
+    error_email: 'Please enter a valid email address',
+    error_required: 'This field is required',
     allow_skip: false,
     url_capture: true,
     url_param: 'email',
+    form_capture: false,
+    abandoned_carts: false,
     accent_color: '#000000',
     extra_selectors: '',
     fields: [
-      { key: 'email', type: 'email', label: 'אימייל', required: true },
-      { key: 'full_name', type: 'text', label: 'שם מלא', required: false },
-      { key: 'accepts_marketing', type: 'checkbox', label: 'אשמח לקבל עדכונים ומבצעים במייל', required: false },
+      { key: 'email', type: 'email', label: 'Email', required: true },
+      { key: 'full_name', type: 'text', label: 'Full name', required: false },
+      { key: 'accepts_marketing', type: 'checkbox', label: 'Email me news and offers', required: false },
     ],
   };
+
+  // The shopper's details also live in a first-party cookie, so they survive cleared localStorage.
+  const COOKIE_NAME = 'cc_details';
+  const COOKIE_MAX_AGE = 180 * 24 * 60 * 60;
 
   const AUTOCOMPLETE = {
     email: 'email', full_name: 'name', first_name: 'given-name', last_name: 'family-name', phone: 'tel', birthday: 'bday',
@@ -114,6 +121,24 @@
     },
   };
 
+  const cookie = {
+    get() {
+      try {
+        const match = document.cookie.split('; ').find((row) => row.startsWith(`${COOKIE_NAME}=`));
+        return match ? JSON.parse(decodeURIComponent(match.slice(COOKIE_NAME.length + 1))) : null;
+      } catch (e) { return null; }
+    },
+    set(details) {
+      // Only what's needed to recognise the shopper — not the full form.
+      const value = encodeURIComponent(JSON.stringify({ email: details.email, source: details.source }));
+      const secure = location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `${COOKIE_NAME}=${value}; Max-Age=${COOKIE_MAX_AGE}; Path=/; SameSite=Lax${secure}`;
+    },
+    remove() {
+      document.cookie = `${COOKIE_NAME}=; Max-Age=0; Path=/; SameSite=Lax`;
+    },
+  };
+
   const emit = (name, detail) => {
     document.dispatchEvent(new CustomEvent(`checkout-capture:${name}`, { detail }));
   };
@@ -159,7 +184,7 @@
   /* -------------------------------------------------------------- details */
 
   function knownDetails() {
-    const stored = storage.get(STORAGE_KEY) || state.memoryDetails;
+    const stored = storage.get(STORAGE_KEY) || cookie.get() || state.memoryDetails;
     if (stored && EMAIL_RE.test(stored.email || '')) return stored;
     if (EMAIL_RE.test(CUSTOMER_EMAIL)) return { email: CUSTOMER_EMAIL, source: 'customer' };
     return null;
@@ -168,9 +193,15 @@
   function rememberDetails(details) {
     const record = { ...details, savedAt: new Date().toISOString() };
     state.memoryDetails = record;
-    storage.set(STORAGE_KEY, record);
+    if (!PREVIEW) {
+      storage.set(STORAGE_KEY, record);
+      cookie.set(record);
+    }
     return record;
   }
+
+  // The API knows popup | url | form; anything else (e.g. a stored record without a source) counts as popup.
+  const apiSource = (d) => (['url', 'form'].includes(d.source) ? d.source : 'popup');
 
   const displayName = (d) => d.name || [d.firstName, d.lastName].filter(Boolean).join(' ') || null;
 
@@ -252,7 +283,7 @@
       keepalive: true,
       body: JSON.stringify({
         key: KEY,
-        source: details.source === 'url' ? 'url' : 'popup',
+        source: apiSource(details),
         email: details.email,
         name: details.name || null,
         first_name: details.firstName || null,
@@ -267,6 +298,33 @@
         cart: cartSnapshot(cart),
       }),
     });
+  }
+
+  /**
+   * Billing counts one activation per cart the module attached an email to on the way
+   * to checkout. Logged-in customers aren't counted — Shopify already has their email.
+   */
+  function recordActivation(details, cart) {
+    if (PREVIEW || !details || details.source === 'customer') return;
+
+    fetchJson(`${API}/api/v1/activations`, {
+      method: 'POST',
+      credentials: 'omit',
+      keepalive: true,
+      body: JSON.stringify({
+        key: KEY,
+        email: details.email,
+        source: apiSource(details),
+        cart_token: (cart && cart.token) || null,
+      }),
+    }).catch(noop);
+  }
+
+  /** Attach to the cart, then count the activation. Never throws. */
+  async function activate(details) {
+    const cart = await attachToCart(details).catch(() => null);
+    recordActivation(details, cart);
+    return cart;
   }
 
   /* ------------------------------------------------------- email from URL */
@@ -298,6 +356,101 @@
     const cart = await getCart().catch(() => null);
     await Promise.allSettled([saveRemote({ ...details, source: 'url' }, cart), attachToCart(details)]);
     emit('captured', { details, popup: false });
+  }
+
+  /* ------------------------------------------------- email from store forms */
+
+  const EMAIL_INPUT_SELECTOR = 'input[type="email"], input[name*="email" i], input[autocomplete="email"], input[id*="email" i]';
+  const formCaptured = new Set();
+
+  /**
+   * Shoppers often type their email into the store's own forms (newsletter, contact,
+   * account). With form capture on, a valid email there identifies them like the popup
+   * does. The popup's own inputs live in Shadow DOM, so their events never reach here.
+   */
+  function onFormEmail(event) {
+    if (!state.config.enabled || !settings().form_capture) return;
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !input.matches(EMAIL_INPUT_SELECTOR)) return;
+    if (input.type === 'password' || input.closest('[data-checkout-capture-ignore]')) return;
+    captureTypedEmail(input.value);
+  }
+
+  function onFormSubmit(event) {
+    if (!state.config.enabled || !settings().form_capture) return;
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || form.closest('[data-checkout-capture-ignore]')) return;
+    form.querySelectorAll(EMAIL_INPUT_SELECTOR).forEach((input) => captureTypedEmail(input.value));
+  }
+
+  async function captureTypedEmail(value) {
+    const email = String(value || '').trim().toLowerCase();
+    if (!EMAIL_RE.test(email) || formCaptured.has(email)) return;
+    formCaptured.add(email);
+
+    const known = knownDetails();
+    if (known && known.email === email && known.source !== 'customer') return; // already identified
+
+    const details = rememberDetails({ email, source: 'form' });
+    const cart = await getCart().catch(() => null);
+    await saveRemote(details, cart).catch(noop);
+    emit('captured', { details, popup: false });
+    trackCart();
+  }
+
+  /* ------------------------------------------------------ abandoned carts */
+
+  const CART_SIGNATURE_KEY = 'checkoutCapture:cartSig';
+  const ACTIVITY_PING_MS = 2 * 60 * 1000;
+  let trackTimer = null;
+
+  /**
+   * Reports an identified shopper's cart to the server (debounced). The server marks it
+   * abandoned once the shop's idle time passes without the shopper heading to checkout.
+   */
+  function trackCart(delay = 600) {
+    if (PREVIEW || !state.config.enabled || !settings().abandoned_carts) return;
+    clearTimeout(trackTimer);
+    trackTimer = setTimeout(() => sendCart().catch(noop), delay);
+  }
+
+  async function sendCart() {
+    const details = knownDetails();
+    if (!details) return;
+
+    const cart = await getCart().catch(() => null);
+    if (!cart || !cart.token) return;
+
+    const snapshot = cartSnapshot(cart);
+    const signature = JSON.stringify([details.email, snapshot.token, snapshot.items.map((i) => [i.variant_id, i.quantity])]);
+    const last = storage.get(CART_SIGNATURE_KEY, window.sessionStorage);
+
+    if (!last && snapshot.item_count === 0) return; // nothing in the cart and nothing tracked yet
+    // Same cart as last time: only refresh the activity clock every couple of minutes.
+    if (last && last.signature === signature && Date.now() - last.at < ACTIVITY_PING_MS) return;
+
+    storage.set(CART_SIGNATURE_KEY, { signature, at: Date.now() }, window.sessionStorage);
+    await fetchJson(`${API}/api/v1/carts`, {
+      method: 'POST',
+      credentials: 'omit',
+      keepalive: true,
+      body: JSON.stringify({
+        key: KEY,
+        email: details.email,
+        source: details.source === 'customer' ? 'customer' : apiSource(details),
+        cart: snapshot,
+      }),
+    });
+  }
+
+  /** Theme add-to-cart requests (/cart/add, /cart/change, …) show up as resource timings. */
+  function watchCartRequests() {
+    if (PREVIEW || !('PerformanceObserver' in window)) return;
+    try {
+      new PerformanceObserver((list) => {
+        if (list.getEntries().some((entry) => /\/cart\/(add|change|update|clear)(\.js)?(\?|$)/.test(entry.name))) trackCart();
+      }).observe({ type: 'resource', buffered: false });
+    } catch (e) { /* resource timing unsupported */ }
   }
 
   /* ------------------------------------------------------------ triggers */
@@ -374,7 +527,7 @@
 
       const known = knownDetails();
       if (known) {
-        await attachToCart(known).catch(noop);
+        await activate(known);
         emit('checkout', { details: known, popup: false });
         return resume(trigger, known);
       }
@@ -610,8 +763,8 @@
       <style>${STYLES}</style>
       <div class="backdrop" part="backdrop" style="--cc-accent:${escapeHtml(s.accent_color || '#000000')}">
         <div class="dialog design-${split ? 'split' : 'classic'}" part="dialog" role="dialog" aria-modal="true" aria-labelledby="cc-title"
-          ${s.subtitle ? 'aria-describedby="cc-subtitle"' : ''} dir="${rtl ? 'rtl' : 'ltr'}" lang="${rtl ? 'he' : 'en'}">
-          <button type="button" class="close" data-action="close" aria-label="${rtl ? 'סגירה' : 'Close'}">&times;</button>
+          ${s.subtitle ? 'aria-describedby="cc-subtitle"' : ''} dir="${rtl ? 'rtl' : 'ltr'}" lang="${escapeHtml(document.documentElement.lang || (rtl ? 'he' : 'en'))}">
+          <button type="button" class="close" data-action="close" aria-label="${escapeHtml(s.close_label || 'Close')}">&times;</button>
           ${media}
           <div class="body">
             ${s.eyebrow ? `<p class="eyebrow">${escapeHtml(s.eyebrow)}</p>` : ''}
@@ -754,10 +907,12 @@
         });
 
         const cart = await withTimeout(cartPromise, 1500).catch(() => null);
-        await Promise.allSettled([
+        const [, attached] = await Promise.allSettled([
           saveRemote({ ...details, website: values.website }, cart),
           attachToCart(details),
         ]);
+        // After the capture request, so the activation can be linked to the saved lead.
+        recordActivation(details, (attached.status === 'fulfilled' && attached.value) || cart);
 
         emit('captured', { details, popup: true });
         finish(details);
@@ -770,8 +925,17 @@
   /* ---------------------------------------------------------------- boot */
 
   state.configReady = loadConfig();
-  state.configReady.then(captureFromUrl).catch((error) => console.warn('[CheckoutCapture] link email not captured.', error));
-  if (!PREVIEW) window.addEventListener('click', onClick, true);
+  state.configReady
+    .then(captureFromUrl)
+    .catch((error) => console.warn('[CheckoutCapture] link email not captured.', error))
+    .then(() => trackCart(0));
+
+  if (!PREVIEW) {
+    window.addEventListener('click', onClick, true);
+    document.addEventListener('change', onFormEmail, true);
+    document.addEventListener('submit', onFormSubmit, true);
+    watchCartRequests();
+  }
 
   // Back button from checkout restores the page from bfcache — make sure nothing is stuck.
   window.addEventListener('pageshow', (event) => {
@@ -783,13 +947,13 @@
   });
 
   window.CheckoutCapture = {
-    version: '1.1.0',
+    version: '1.3.0',
     /** For themes that start checkout from JS: `await CheckoutCapture.ensure()` before redirecting. */
     async ensure() {
       await withTimeout(state.configReady, 1500).catch(noop);
       if (!state.config.enabled) return null;
       const known = knownDetails();
-      if (known) { await attachToCart(known).catch(noop); return known; }
+      if (known) { await activate(known); return known; }
       if (state.config.mode !== 'popup') return null;
       const details = await openPopup(null);
       return details && !details.skipped ? details : null;
@@ -799,6 +963,6 @@
       return openPopup(null);
     },
     details: () => knownDetails(),
-    forget() { state.memoryDetails = null; storage.remove(STORAGE_KEY); },
+    forget() { state.memoryDetails = null; storage.remove(STORAGE_KEY); cookie.remove(); },
   };
 })();

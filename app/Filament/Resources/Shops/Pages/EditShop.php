@@ -33,7 +33,7 @@ class EditShop extends EditRecord
     {
         // Filament applies ->default() only on create; toggles and pickers would otherwise
         // show empty/off for keys this shop never saved, and saving would flip them.
-        foreach (['design', 'direction', 'accent_color', 'url_capture', 'allow_skip'] as $key) {
+        foreach (['design', 'direction', 'accent_color', 'url_capture', 'form_capture', 'abandoned_carts', 'allow_skip'] as $key) {
             $data['settings'][$key] ??= Shop::DEFAULT_SETTINGS[$key];
         }
 

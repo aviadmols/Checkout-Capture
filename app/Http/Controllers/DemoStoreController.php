@@ -60,6 +60,18 @@ class DemoStoreController extends Controller
         return response()->json($cart);
     }
 
+    /** AJAX add-to-cart: one more of the first product. */
+    public function add(Request $request): JsonResponse
+    {
+        $cart = $this->state($request);
+        $cart['items'][0]['quantity']++;
+        $cart['item_count']++;
+        $cart['total_price'] += $cart['items'][0]['price'];
+        $request->session()->put('demo_cart', $cart);
+
+        return response()->json($cart['items'][0]);
+    }
+
     /** Shopify's cart form posts here with `checkout` set and gets redirected to checkout. */
     public function submit(Request $request): RedirectResponse
     {

@@ -144,6 +144,13 @@ class CaptureApiTest extends TestCase
         $this->assertSame('popup', $capture->source);
     }
 
+    public function test_emails_typed_into_store_forms_are_saved_with_their_source(): void
+    {
+        $this->submit(['source' => 'form', 'name' => null, 'phone' => null])->assertCreated();
+
+        $this->assertSame('form', Capture::sole()->source);
+    }
+
     public function test_link_mode_shops_accept_emails_from_links_and_keep_the_first_source(): void
     {
         $this->shop->update(['mode' => Shop::MODE_URL]);

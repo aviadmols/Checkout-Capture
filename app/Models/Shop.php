@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\UsagePlan;
 use Database\Factories\ShopFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,7 +28,8 @@ class Shop extends Model
 
     public const MODES = [self::MODE_POPUP, self::MODE_URL, self::MODE_OFF];
 
-    public const SOURCES = ['popup', 'url'];
+    /** popup = the form, url = email from a link, form = email typed into one of the store's own forms. */
+    public const SOURCES = ['popup', 'url', 'form'];
 
     public const DESIGNS = ['classic', 'split'];
 
@@ -36,14 +38,37 @@ class Shop extends Model
      * on/off state, required flag and label overrides; anything missing falls back to these.
      */
     public const FIELDS = [
-        'email' => ['type' => 'email', 'label' => 'אימייל', 'enabled' => true, 'required' => true],
-        'full_name' => ['type' => 'text', 'label' => 'שם מלא', 'enabled' => true, 'required' => false],
-        'first_name' => ['type' => 'text', 'label' => 'שם פרטי', 'enabled' => false, 'required' => false],
-        'last_name' => ['type' => 'text', 'label' => 'שם משפחה', 'enabled' => false, 'required' => false],
-        'phone' => ['type' => 'tel', 'label' => 'טלפון', 'enabled' => false, 'required' => false],
-        'birthday' => ['type' => 'date', 'label' => 'תאריך לידה', 'enabled' => false, 'required' => false],
-        'accepts_marketing' => ['type' => 'checkbox', 'label' => 'אשמח לקבל עדכונים ומבצעים במייל', 'enabled' => true, 'required' => false],
-        'accepts_sms' => ['type' => 'checkbox', 'label' => 'אשמח לקבל עדכונים ב-SMS', 'enabled' => false, 'required' => false],
+        'email' => ['type' => 'email', 'label' => 'Email', 'enabled' => true, 'required' => true],
+        'full_name' => ['type' => 'text', 'label' => 'Full name', 'enabled' => true, 'required' => false],
+        'first_name' => ['type' => 'text', 'label' => 'First name', 'enabled' => false, 'required' => false],
+        'last_name' => ['type' => 'text', 'label' => 'Last name', 'enabled' => false, 'required' => false],
+        'phone' => ['type' => 'tel', 'label' => 'Phone', 'enabled' => false, 'required' => false],
+        'birthday' => ['type' => 'date', 'label' => 'Birthday', 'enabled' => false, 'required' => false],
+        'accepts_marketing' => ['type' => 'checkbox', 'label' => 'Email me news and offers', 'enabled' => true, 'required' => false],
+        'accepts_sms' => ['type' => 'checkbox', 'label' => 'Text me news and offers', 'enabled' => false, 'required' => false],
+    ];
+
+    /** One-click Hebrew preset for the admin ("Fill in Hebrew"). */
+    public const HEBREW_TEXTS = [
+        'direction' => 'rtl',
+        'title' => 'רגע לפני התשלום',
+        'subtitle' => 'השאירו מייל ונשמור לכם את העגלה — כדי שלא תאבדו אותה בדרך.',
+        'submit_label' => 'המשך לתשלום',
+        'skip_label' => 'המשך בלי למלא',
+        'close_label' => 'סגירה',
+        'error_email' => 'נא להזין כתובת מייל תקינה',
+        'error_required' => 'שדה חובה',
+    ];
+
+    public const HEBREW_FIELD_LABELS = [
+        'email' => 'אימייל',
+        'full_name' => 'שם מלא',
+        'first_name' => 'שם פרטי',
+        'last_name' => 'שם משפחה',
+        'phone' => 'טלפון',
+        'birthday' => 'תאריך לידה',
+        'accepts_marketing' => 'אשמח לקבל עדכונים ומבצעים במייל',
+        'accepts_sms' => 'אשמח לקבל עדכונים ב-SMS',
     ];
 
     /** Admin-facing names for the field picker. */
@@ -61,20 +86,26 @@ class Shop extends Model
     /** Popup defaults. Anything stored in `settings` overrides these key by key. */
     public const DEFAULT_SETTINGS = [
         'design' => 'classic',
-        'direction' => 'rtl',
+        'direction' => 'ltr',
         'eyebrow' => '',
-        'title' => 'רגע לפני התשלום',
-        'subtitle' => 'השאירו מייל ונשמור לכם את העגלה — כדי שלא תאבדו אותה בדרך.',
+        'title' => 'Before you check out',
+        'subtitle' => 'Leave your email and we\'ll save your cart, so you don\'t lose it on the way.',
         'image_url' => '',
-        'submit_label' => 'המשך לתשלום',
-        'skip_label' => 'המשך בלי למלא',
+        'submit_label' => 'Continue to checkout',
+        'skip_label' => 'Continue without filling',
+        'close_label' => 'Close',
         'privacy_note' => '',
-        'error_email' => 'נא להזין כתובת מייל תקינה',
-        'error_required' => 'שדה חובה',
+        'error_email' => 'Please enter a valid email address',
+        'error_required' => 'This field is required',
         'allow_skip' => false,
         // Read the email from links like ?email=dana@example.com. Always on in url mode.
         'url_capture' => true,
         'url_param' => 'email',
+        // Pick up emails shoppers type into the store's own forms (newsletter, contact, account).
+        'form_capture' => false,
+        // Mark carts of identified shoppers as abandoned after this many idle minutes.
+        'abandoned_carts' => false,
+        'abandon_after_minutes' => 30,
         'accent_color' => '#000000',
         'extra_selectors' => '',
     ];
@@ -125,6 +156,21 @@ class Shop extends Model
     public function captures(): HasMany
     {
         return $this->hasMany(Capture::class);
+    }
+
+    public function activations(): HasMany
+    {
+        return $this->hasMany(Activation::class);
+    }
+
+    public function trackedCarts(): HasMany
+    {
+        return $this->hasMany(TrackedCart::class);
+    }
+
+    public function activationCount(?string $period = null): int
+    {
+        return $this->activations()->where('period', $period ?? UsagePlan::period())->count();
     }
 
     public function isOff(): bool

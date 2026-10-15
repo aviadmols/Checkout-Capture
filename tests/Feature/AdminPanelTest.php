@@ -7,6 +7,7 @@ use App\Filament\Resources\Shops\Pages\EditShop;
 use App\Models\Capture;
 use App\Models\Shop;
 use App\Models\User;
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -40,6 +41,8 @@ class AdminPanelTest extends TestCase
         $this->get("/admin/shops/{$shop->id}/edit?tab=install::data::tab")->assertOk()
             ->assertSee($shop->public_key)
             ->assertSee('?email={{ email }}', false);
+        $this->get("/admin/shops/{$shop->id}/edit?tab=usage::data::tab")->assertOk()->assertSee('checkouts created')->assertSee('Growth $14');
+        $this->get('/admin/tracked-carts')->assertOk()->assertSee('Abandoned carts');
         $this->get('/admin/captures')->assertOk()->assertSee('dana@example.com')->assertSee('Link');
         $this->get("/admin/captures/{$capture->id}")->assertOk()->assertSee('Shake')->assertSee('Email from link');
     }
@@ -67,6 +70,32 @@ class AdminPanelTest extends TestCase
             array_column($shop->resolvedSettings()['fields'], 'key'),
             'new shops start with the default field set',
         );
+    }
+
+    public function test_fill_in_hebrew_translates_every_text_and_label(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $shop = Shop::factory()->create();
+
+        Livewire::test(EditShop::class, ['record' => $shop->getRouteKey()])
+            ->callAction(TestAction::make('fillHebrew')->schemaComponent('language'))
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $settings = $shop->refresh()->resolvedSettings();
+        $this->assertSame('rtl', $settings['direction']);
+        $this->assertSame(Shop::HEBREW_TEXTS['title'], $settings['title']);
+        $this->assertSame(Shop::HEBREW_TEXTS['close_label'], $settings['close_label']);
+        $this->assertSame('אימייל', $settings['fields'][0]['label']);
+
+        Livewire::test(EditShop::class, ['record' => $shop->getRouteKey()])
+            ->callAction(TestAction::make('fillEnglish')->schemaComponent('language'))
+            ->call('save');
+
+        $settings = $shop->refresh()->resolvedSettings();
+        $this->assertSame('ltr', $settings['direction']);
+        $this->assertSame('Before you check out', $settings['title']);
+        $this->assertSame('Email', $settings['fields'][0]['label']);
     }
 
     public function test_switching_to_link_only_keeps_the_popup_settings(): void

@@ -45,7 +45,7 @@ class WidgetConfigTest extends TestCase
         // disabled fields dropped, fields missing from the saved list fall back to defaults.
         $this->assertSame([
             ['key' => 'phone', 'type' => 'tel', 'label' => 'Mobile', 'enabled' => true, 'required' => true],
-            ['key' => 'email', 'type' => 'email', 'label' => 'אימייל', 'enabled' => true, 'required' => true],
+            ['key' => 'email', 'type' => 'email', 'label' => 'Email', 'enabled' => true, 'required' => true],
             ['key' => 'accepts_sms', 'type' => 'checkbox', 'label' => Shop::FIELDS['accepts_sms']['label'], 'enabled' => true, 'required' => false],
             ['key' => 'accepts_marketing', 'type' => 'checkbox', 'label' => Shop::FIELDS['accepts_marketing']['label'], 'enabled' => true, 'required' => false],
         ], $response->json('settings.fields'));

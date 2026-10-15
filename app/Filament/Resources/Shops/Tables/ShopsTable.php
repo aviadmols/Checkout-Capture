@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Shops\Tables;
 
 use App\Models\Shop;
+use App\Support\UsagePlan;
+use Illuminate\Database\Eloquent\Builder;
 use Filament\Actions\EditAction;
 use Filament\Support\Enums\FontFamily;
 use Filament\Tables\Columns\TextColumn;
@@ -28,6 +30,16 @@ class ShopsTable
                     ->label('Captures')
                     ->counts('captures')
                     ->sortable(),
+                TextColumn::make('activations_count')
+                    ->label('Checkouts this month')
+                    ->counts(['activations' => fn (Builder $query) => $query->where('period', UsagePlan::period())])
+                    ->numeric()
+                    ->sortable(),
+                TextColumn::make('plan')
+                    ->label('Plan')
+                    ->state(fn (Shop $record) => UsagePlan::label((int) $record->activations_count))
+                    ->badge()
+                    ->color(fn (Shop $record) => UsagePlan::forActivations((int) $record->activations_count)['price'] ? 'warning' : 'gray'),
                 TextColumn::make('mode')
                     ->badge()
                     ->formatStateUsing(fn (string $state) => match ($state) {

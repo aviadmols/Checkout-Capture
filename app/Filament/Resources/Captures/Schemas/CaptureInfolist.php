@@ -26,7 +26,11 @@ class CaptureInfolist
                         IconEntry::make('accepts_sms')->label('SMS opt-in')->boolean(),
                         TextEntry::make('source')
                             ->badge()
-                            ->formatStateUsing(fn (string $state) => $state === 'url' ? 'Email from link' : 'Popup form'),
+                            ->formatStateUsing(fn (string $state) => match ($state) {
+                                'url' => 'Email from link',
+                                'form' => 'Typed into a store form',
+                                default => 'Popup form',
+                            }),
                         TextEntry::make('shop.name')->label('Shop'),
                         TextEntry::make('locale')->placeholder('—'),
                     ]),

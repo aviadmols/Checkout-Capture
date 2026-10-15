@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="he" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -43,9 +43,9 @@
     </nav>
 </header>
 <main>
-    <p class="eyebrow">תצוגה מקדימה</p>
-    <h1><span class="light">ככה זה ייראה</span><span class="black">בחנות שלך</span></h1>
-    <p>הפופאפ מוצג עם ההגדרות השמורות של החנות. בתצוגה המקדימה שום דבר לא נשמר ולא נשלח ל-Shopify. כדי לראות שינויים, שומרים בפאנל ומרעננים את הדף.</p>
+    <p class="eyebrow">PREVIEW</p>
+    <h1><span class="light">This is how it looks</span><span class="black">in your store</span></h1>
+    <p>The popup uses the shop's saved settings. Nothing is saved or sent to Shopify in preview. To see changes, save in the admin and reload this page.</p>
 </main>
 
 <script type="application/json" id="checkout-capture-config">@json($config)</script>
