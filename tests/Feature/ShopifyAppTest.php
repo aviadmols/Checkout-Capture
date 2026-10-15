@@ -54,7 +54,7 @@ class ShopifyAppTest extends TestCase
             }
 
             $query = (string) (self::gql($request)['query'] ?? '');
-            $operation = collect(['primaryDomain', 'storefrontAccessTokenCreate', 'metafieldsSet', 'activeSubscriptions', 'appSubscriptionCreate', 'appUsageRecordCreate', 'customers(', 'customerCreate', 'flowTriggerReceive'])
+            $operation = collect(['partnerDevelopment', 'primaryDomain', 'storefrontAccessTokenCreate', 'metafieldsSet', 'activeSubscriptions', 'appSubscriptionCreate', 'appUsageRecordCreate', 'customers(', 'customerCreate', 'flowTriggerReceive'])
                 ->first(fn ($op) => str_contains($query, $op)) ?? 'unknown';
             $this->calls[] = $operation;
 
@@ -234,6 +234,23 @@ class ShopifyAppTest extends TestCase
         $billing->chargeForUsage($shop);
         $this->assertEquals([14, 11], UsageCharge::orderBy('id')->pluck('amount')->map(fn ($a) => (float) $a)->all());
         $this->assertSame(2, collect($this->calls)->filter(fn ($c) => $c === 'appUsageRecordCreate')->count());
+    }
+
+    public function test_development_stores_always_get_test_charges(): void
+    {
+        config(['shopify.billing_test' => false]);
+        $this->fakeShopify();
+        $this->installedShop();
+
+        $this->overrides = ['partnerDevelopment' => ['shop' => ['plan' => ['partnerDevelopment' => true]]]];
+        $this->app('POST', 'billing/subscribe')->assertOk();
+        Http::assertSent(fn (Request $r) => str_contains(self::gql($r)['query'] ?? '', 'appSubscriptionCreate')
+            && self::gql($r)['variables']['test'] === true);
+
+        $this->overrides = ['partnerDevelopment' => ['shop' => ['plan' => ['partnerDevelopment' => false]]]];
+        $this->app('POST', 'billing/subscribe')->assertOk();
+        Http::assertSent(fn (Request $r) => str_contains(self::gql($r)['query'] ?? '', 'appSubscriptionCreate')
+            && self::gql($r)['variables']['test'] === false);
     }
 
     public function test_abandoned_carts_of_installed_shops_fire_the_flow_trigger(): void

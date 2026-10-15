@@ -31,6 +31,10 @@ class Billing
     {
         $cap = collect(UsagePlan::TIERS)->max('price');
 
+        // Development stores (including the ones Shopify's reviewers use) only accept test charges.
+        $plan = $this->shopify->graphql($shop, 'query { shop { plan { partnerDevelopment } } }');
+        $test = (bool) config('shopify.billing_test') || (bool) ($plan['shop']['plan']['partnerDevelopment'] ?? false);
+
         $result = $this->shopify->graphql($shop, <<<'GQL'
             mutation($name: String!, $returnUrl: URL!, $lineItems: [AppSubscriptionLineItemInput!]!, $test: Boolean) {
               appSubscriptionCreate(name: $name, returnUrl: $returnUrl, lineItems: $lineItems, test: $test) {
@@ -42,7 +46,7 @@ class Billing
             GQL, [
             'name' => self::SUBSCRIPTION_NAME,
             'returnUrl' => route('shopify.billing.return', ['shop' => $shop->shop_domain]),
-            'test' => (bool) config('shopify.billing_test'),
+            'test' => $test,
             'lineItems' => [[
                 'plan' => ['appUsagePricingDetails' => [
                     'terms' => self::terms(),
