@@ -1,0 +1,14 @@
+{%- comment -%}
+  Checkout Capture — asks for an email before checkout and attaches it to the cart.
+  Render once from layout/theme.liquid, just before </body>:
+    {% render 'checkout-capture' %}
+  Replace APP_URL and PUBLIC_KEY with the values from the admin (Shops → Install tab).
+{%- endcomment -%}
+{%- unless request.design_mode -%}
+  <script
+    src="APP_URL/js/checkout-capture.js?v=1"
+    data-key="PUBLIC_KEY"
+    {%- if customer %} data-customer-email="{{ customer.email | escape }}"{% endif %}
+    defer
+  ></script>
+{%- endunless -%}
