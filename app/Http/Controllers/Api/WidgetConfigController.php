@@ -12,16 +12,16 @@ class WidgetConfigController extends Controller
     {
         $shop = Shop::query()
             ->where('public_key', $publicKey)
-            ->where('is_active', true)
+            ->where('mode', '!=', Shop::MODE_OFF)
             ->first();
 
-        // An unknown or paused shop gets `enabled: false` so the widget lets checkout through untouched.
+        // An unknown or switched-off shop gets `enabled: false` so the widget lets checkout through untouched.
         $payload = $shop
             ? ['enabled' => true, ...$shop->widgetConfig()]
             : ['enabled' => false];
 
         return response()
             ->json($payload)
-            ->header('Cache-Control', 'public, max-age=300');
+            ->header('Cache-Control', 'public, max-age=60');
     }
 }

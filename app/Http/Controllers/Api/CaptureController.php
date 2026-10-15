@@ -14,7 +14,7 @@ class CaptureController extends Controller
     {
         $shop = Shop::query()
             ->where('public_key', $request->validated('key'))
-            ->where('is_active', true)
+            ->where('mode', '!=', Shop::MODE_OFF)
             ->first();
 
         if (! $shop) {

@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\Shops\Tables;
 
+use App\Models\Shop;
 use Filament\Actions\EditAction;
 use Filament\Support\Enums\FontFamily;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -28,9 +28,18 @@ class ShopsTable
                     ->label('Captures')
                     ->counts('captures')
                     ->sortable(),
-                IconColumn::make('is_active')
-                    ->label('Active')
-                    ->boolean(),
+                TextColumn::make('mode')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state) => match ($state) {
+                        Shop::MODE_POPUP => 'Popup',
+                        Shop::MODE_URL => 'Link only',
+                        default => 'Off',
+                    })
+                    ->color(fn (string $state) => match ($state) {
+                        Shop::MODE_POPUP => 'success',
+                        Shop::MODE_URL => 'info',
+                        default => 'gray',
+                    }),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

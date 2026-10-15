@@ -34,9 +34,17 @@ class CapturesTable
                 TextColumn::make('shop.name')
                     ->label('Shop')
                     ->toggleable(),
+                TextColumn::make('source')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state) => $state === 'url' ? 'Link' : 'Popup')
+                    ->color(fn (string $state) => $state === 'url' ? 'info' : 'gray'),
                 IconColumn::make('accepts_marketing')
-                    ->label('Marketing')
+                    ->label('Email opt-in')
                     ->boolean(),
+                IconColumn::make('accepts_sms')
+                    ->label('SMS opt-in')
+                    ->boolean()
+                    ->toggleable(),
                 TextColumn::make('cart_total_cents')
                     ->label('Cart')
                     ->money(fn (Capture $record) => $record->currency ?: 'ILS', divideBy: 100)
@@ -64,8 +72,12 @@ class CapturesTable
             ->filters([
                 SelectFilter::make('shop')
                     ->relationship('shop', 'name'),
+                SelectFilter::make('source')
+                    ->options(['popup' => 'Popup', 'url' => 'Link']),
                 TernaryFilter::make('accepts_marketing')
-                    ->label('Marketing consent'),
+                    ->label('Email opt-in'),
+                TernaryFilter::make('accepts_sms')
+                    ->label('SMS opt-in'),
             ])
             ->recordActions([
                 ViewAction::make(),

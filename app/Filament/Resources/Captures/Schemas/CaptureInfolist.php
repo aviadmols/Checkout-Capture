@@ -21,7 +21,12 @@ class CaptureInfolist
                         TextEntry::make('email')->copyable(),
                         TextEntry::make('name')->state(fn (Capture $record) => $record->fullName())->placeholder('—'),
                         TextEntry::make('phone')->placeholder('—')->copyable(),
-                        IconEntry::make('accepts_marketing')->label('Marketing consent')->boolean(),
+                        TextEntry::make('birthday')->date()->placeholder('—'),
+                        IconEntry::make('accepts_marketing')->label('Email opt-in')->boolean(),
+                        IconEntry::make('accepts_sms')->label('SMS opt-in')->boolean(),
+                        TextEntry::make('source')
+                            ->badge()
+                            ->formatStateUsing(fn (string $state) => $state === 'url' ? 'Email from link' : 'Popup form'),
                         TextEntry::make('shop.name')->label('Shop'),
                         TextEntry::make('locale')->placeholder('—'),
                     ]),

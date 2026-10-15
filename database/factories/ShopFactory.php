@@ -19,13 +19,18 @@ class ShopFactory extends Factory
             'shop_domain' => "{$handle}.myshopify.com",
             'allowed_origins' => ["{$handle}.co.il", "www.{$handle}.co.il"],
             'storefront_access_token' => null,
-            'is_active' => true,
+            'mode' => Shop::MODE_POPUP,
             'settings' => [],
         ];
     }
 
-    public function inactive(): static
+    public function off(): static
     {
-        return $this->state(['is_active' => false]);
+        return $this->state(['mode' => Shop::MODE_OFF]);
+    }
+
+    public function urlOnly(): static
+    {
+        return $this->state(['mode' => Shop::MODE_URL]);
     }
 }

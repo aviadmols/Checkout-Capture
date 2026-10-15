@@ -21,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Hosted behind a proxy/CDN: the real visitor IP drives the per-IP rate limit.
         $middleware->trustProxies(at: '*');
+        // The only login is Filament's.
+        $middleware->redirectGuestsTo('/admin/login');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

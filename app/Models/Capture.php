@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'shop_id', 'email', 'first_name', 'last_name', 'phone', 'accepts_marketing',
+    'shop_id', 'email', 'first_name', 'last_name', 'phone', 'birthday',
+    'accepts_marketing', 'accepts_sms', 'source',
     'cart_token', 'cart_total_cents', 'currency', 'item_count', 'cart_items',
     'locale', 'page_url', 'ip_address', 'user_agent',
     'submissions_count', 'first_captured_at', 'last_captured_at',
@@ -23,6 +24,8 @@ class Capture extends Model
     {
         return [
             'accepts_marketing' => 'boolean',
+            'accepts_sms' => 'boolean',
+            'birthday' => 'date',
             'cart_items' => 'array',
             'cart_total_cents' => 'integer',
             'item_count' => 'integer',

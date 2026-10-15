@@ -105,11 +105,11 @@ class CaptureApiTest extends TestCase
         $this->submit(['email' => 'c@example.com'], 'https://mills.co.il')->assertCreated();
     }
 
-    public function test_unknown_or_inactive_shop_is_rejected(): void
+    public function test_unknown_or_switched_off_shop_is_rejected(): void
     {
         $this->submit(['key' => 'cc_nope'])->assertNotFound();
 
-        $this->shop->update(['is_active' => false]);
+        $this->shop->update(['mode' => Shop::MODE_OFF]);
         $this->submit()->assertNotFound();
 
         $this->assertSame(0, Capture::count());
@@ -121,6 +121,38 @@ class CaptureApiTest extends TestCase
         $this->submit(['email' => ''])->assertUnprocessable()->assertJsonValidationErrors('email');
         $this->submit(['phone' => '12'])->assertUnprocessable()->assertJsonValidationErrors('phone');
         $this->submit(['cart' => ['total_price' => -5]])->assertUnprocessable()->assertJsonValidationErrors('cart.total_price');
+        $this->submit(['birthday' => '31/12/1990'])->assertUnprocessable()->assertJsonValidationErrors('birthday');
+        $this->submit(['birthday' => now()->addDay()->toDateString()])->assertUnprocessable()->assertJsonValidationErrors('birthday');
+        $this->submit(['source' => 'facebook'])->assertUnprocessable()->assertJsonValidationErrors('source');
+    }
+
+    public function test_it_stores_the_optional_fields(): void
+    {
+        $this->submit([
+            'name' => null,
+            'first_name' => ' דנה ',
+            'last_name' => 'כהן',
+            'birthday' => '1990-05-17',
+            'accepts_sms' => true,
+        ])->assertCreated();
+
+        $capture = Capture::sole();
+        $this->assertSame('דנה', $capture->first_name);
+        $this->assertSame('כהן', $capture->last_name);
+        $this->assertSame('1990-05-17', $capture->birthday->toDateString());
+        $this->assertTrue($capture->accepts_sms);
+        $this->assertSame('popup', $capture->source);
+    }
+
+    public function test_link_mode_shops_accept_emails_from_links_and_keep_the_first_source(): void
+    {
+        $this->shop->update(['mode' => Shop::MODE_URL]);
+
+        $this->submit(['source' => 'url', 'name' => null, 'phone' => null, 'cart' => null])->assertCreated();
+        $this->assertSame('url', Capture::sole()->source);
+
+        $this->submit(['source' => 'popup'])->assertOk();
+        $this->assertSame('url', Capture::sole()->source, 'source records how the lead was first captured');
     }
 
     public function test_honeypot_is_accepted_but_not_stored(): void

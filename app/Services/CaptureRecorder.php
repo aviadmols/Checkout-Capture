@@ -31,7 +31,10 @@ class CaptureRecorder
     private function upsert(Shop $shop, array $data, array $context): Capture
     {
         $now = now();
+        // Separate first/last fields win over a full name split on the first space.
         [$firstName, $lastName] = $this->splitName($data['name'] ?? null);
+        $firstName = $data['first_name'] ?? $firstName;
+        $lastName = $data['last_name'] ?? $lastName;
         $cart = $data['cart'] ?? [];
 
         $capture = Capture::query()->firstOrNew([
@@ -43,6 +46,7 @@ class CaptureRecorder
             'first_name' => $firstName,
             'last_name' => $lastName,
             'phone' => $data['phone'] ?? null,
+            'birthday' => $data['birthday'] ?? null,
             'locale' => $data['locale'] ?? null,
             'page_url' => $data['page_url'] ?? null,
             'ip_address' => $context['ip_address'] ?? null,
@@ -66,10 +70,16 @@ class CaptureRecorder
             $capture->accepts_marketing = true;
         }
 
+        if (! empty($data['accepts_sms'])) {
+            $capture->accepts_sms = true;
+        }
+
         if ($capture->exists) {
             $capture->submissions_count++;
         } else {
             $capture->first_captured_at = $now;
+            // Where the lead first came from: the popup form or an email in a campaign link.
+            $capture->source = $data['source'] ?? 'popup';
         }
 
         $capture->last_captured_at = $now;

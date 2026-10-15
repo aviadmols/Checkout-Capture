@@ -24,7 +24,11 @@ class DemoStoreController extends Controller
                 'name' => 'Demo Store',
                 'shop_domain' => 'demo-store.myshopify.com',
                 'storefront_access_token' => 'demo_storefront_token',
-                'settings' => ['name_field' => 'optional', 'phone_field' => 'optional'],
+                'settings' => ['fields' => [
+                    ['key' => 'email'],
+                    ['key' => 'full_name', 'enabled' => true],
+                    ['key' => 'phone', 'enabled' => true],
+                ]],
             ],
         );
 

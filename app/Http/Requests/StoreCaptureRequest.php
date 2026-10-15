@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Shop;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class StoreCaptureRequest extends FormRequest
 {
@@ -14,10 +16,15 @@ class StoreCaptureRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $squish = fn (string $key) => $this->filled($key) ? Str::squish((string) $this->input($key)) : null;
+
         $this->merge([
             'email' => Str::lower(trim((string) $this->input('email'))),
-            'name' => $this->filled('name') ? Str::squish((string) $this->input('name')) : null,
+            'name' => $squish('name'),
+            'first_name' => $squish('first_name'),
+            'last_name' => $squish('last_name'),
             'phone' => $this->filled('phone') ? preg_replace('/[^\d+]/', '', (string) $this->input('phone')) : null,
+            'birthday' => $this->filled('birthday') ? $this->input('birthday') : null,
         ]);
     }
 
@@ -27,8 +34,13 @@ class StoreCaptureRequest extends FormRequest
             'key' => ['required', 'string', 'max:64'],
             'email' => ['required', 'email:rfc', 'max:254'],
             'name' => ['nullable', 'string', 'max:120'],
+            'first_name' => ['nullable', 'string', 'max:60'],
+            'last_name' => ['nullable', 'string', 'max:60'],
             'phone' => ['nullable', 'string', 'min:7', 'max:20'],
+            'birthday' => ['nullable', 'date_format:Y-m-d', 'after:1900-01-01', 'before:today'],
             'accepts_marketing' => ['nullable', 'boolean'],
+            'accepts_sms' => ['nullable', 'boolean'],
+            'source' => ['nullable', Rule::in(Shop::SOURCES)],
             // Honeypot — real visitors never see this field.
             'website' => ['nullable', 'string', 'max:255'],
 

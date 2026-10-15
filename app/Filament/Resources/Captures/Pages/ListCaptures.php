@@ -32,7 +32,7 @@ class ListCaptures extends ListRecords
         return response()->streamDownload(function () use ($query) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF"); // BOM so Excel reads Hebrew correctly
-            fputcsv($out, ['email', 'first_name', 'last_name', 'phone', 'accepts_marketing', 'shop', 'cart_total', 'currency', 'items', 'submissions', 'first_seen', 'last_seen']);
+            fputcsv($out, ['email', 'first_name', 'last_name', 'phone', 'birthday', 'accepts_marketing', 'accepts_sms', 'source', 'shop', 'cart_total', 'currency', 'items', 'submissions', 'first_seen', 'last_seen']);
 
             $query->lazyById(500)->each(function (Capture $c) use ($out) {
                 fputcsv($out, [
@@ -40,7 +40,10 @@ class ListCaptures extends ListRecords
                     $c->first_name,
                     $c->last_name,
                     $c->phone,
+                    $c->birthday?->toDateString(),
                     $c->accepts_marketing ? 'yes' : 'no',
+                    $c->accepts_sms ? 'yes' : 'no',
+                    $c->source,
                     $c->shop?->name,
                     $c->cart_total_cents !== null ? number_format($c->cart_total_cents / 100, 2, '.', '') : null,
                     $c->currency,
