@@ -32,7 +32,7 @@ class AdminPanelTest extends TestCase
 
         $this->actingAs(User::factory()->create());
 
-        $this->get('/admin')->assertOk()->assertSee('New today');
+        $this->get('/admin')->assertOk()->assertSee('New today')->assertSee('Orders received');
         $this->get('/admin/shops')->assertOk()->assertSee('Mills IL')->assertSee('Popup');
         $this->get('/admin/shops/create')->assertOk()->assertSee('How it works')->assertSee('Email from link only');
         $this->get("/admin/shops/{$shop->id}/edit?tab=popup::data::tab")->assertOk()
@@ -41,7 +41,7 @@ class AdminPanelTest extends TestCase
         $this->get("/admin/shops/{$shop->id}/edit?tab=install::data::tab")->assertOk()
             ->assertSee($shop->public_key)
             ->assertSee('?email={{ email }}', false);
-        $this->get("/admin/shops/{$shop->id}/edit?tab=usage::data::tab")->assertOk()->assertSee('checkouts created')->assertSee('Growth $14');
+        $this->get("/admin/shops/{$shop->id}/edit?tab=usage::data::tab")->assertOk()->assertSee('checkouts created')->assertSee('Growth $14')->assertSee('Orders received from captured shoppers');
         $this->get('/admin/tracked-carts')->assertOk()->assertSee('Abandoned carts');
         $this->get('/admin/captures')->assertOk()->assertSee('dana@example.com')->assertSee('Link');
         $this->get("/admin/captures/{$capture->id}")->assertOk()->assertSee('Shake')->assertSee('Email from link');

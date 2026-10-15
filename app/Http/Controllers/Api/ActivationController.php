@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ChargeUsage;
 use App\Models\Activation;
 use App\Models\Capture;
 use App\Models\Shop;
 use App\Models\TrackedCart;
-use App\Support\UsagePlan;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -51,11 +51,15 @@ class ActivationController extends Controller
             'email' => $email,
             'cart_token' => $cartToken,
             'source' => $data['source'],
-            'period' => UsagePlan::period($now),
+            'period' => $shop->periodFor($now),
             'dedupe_key' => hash('sha256', $cartToken ? "cart:{$cartToken}" : "email:{$email}"),
             'created_at' => $now,
             'updated_at' => $now,
         ]);
+
+        if ($counted && $shop->billing_status === 'active') {
+            ChargeUsage::dispatchAfterResponse($shop->id);
+        }
 
         // The shopper is on the way to checkout — this cart is no longer a candidate for abandonment.
         if ($cartToken) {

@@ -7,6 +7,7 @@ use App\Support\UsagePlan;
 use Filament\Actions\Action;
 use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Radio;
@@ -308,19 +309,41 @@ class ShopForm
                 : 'above that: '."{$t['name']} \${$t['price']}")
             ->implode(' · ');
 
-        $month = fn (int $monthsAgo) => [
-            TextEntry::make("usage_{$monthsAgo}_count")
-                ->label(now()->subMonthsNoOverflow($monthsAgo)->format('F Y').' — checkouts created')
-                ->state(fn (?Shop $record) => $record?->activationCount(UsagePlan::period(now()->subMonthsNoOverflow($monthsAgo))) ?? 0)
+        // Shops billed through Shopify follow their 30-day billing cycle; others use calendar months.
+        $period = fn (?Shop $record, bool $previous) => $record
+            ? ($previous ? $record->previousPeriod() : $record->periodFor())
+            : UsagePlan::period();
+
+        $usage = fn (bool $previous) => [
+            TextEntry::make('usage_'.($previous ? 'previous' : 'current').'_count')
+                ->label(fn (?Shop $record) => ($previous ? 'Previous' : 'Current').' period ('.$period($record, $previous).') — checkouts created')
+                ->state(fn (?Shop $record) => $record?->activationCount($period($record, $previous)) ?? 0)
                 ->numeric(),
-            TextEntry::make("usage_{$monthsAgo}_plan")
+            TextEntry::make('usage_'.($previous ? 'previous' : 'current').'_plan')
                 ->label('Plan')
-                ->state(fn (?Shop $record) => UsagePlan::label($record?->activationCount(UsagePlan::period(now()->subMonthsNoOverflow($monthsAgo))) ?? 0))
+                ->state(fn (?Shop $record) => UsagePlan::label($record?->activationCount($period($record, $previous)) ?? 0))
                 ->badge(),
         ];
 
         return [
-            Grid::make(2)->schema([...$month(0), ...$month(1)]),
+            Grid::make(2)->schema([...$usage(false), ...$usage(true)]),
+            TextEntry::make('orders_received')
+                ->label('Orders received from captured shoppers (current period)')
+                ->state(function (?Shop $record) {
+                    if (! $record) {
+                        return null;
+                    }
+
+                    $start = strlen($record->periodFor()) === 10
+                        ? Carbon::parse($record->periodFor())
+                        : Carbon::parse($record->periodFor().'-01');
+                    $orders = $record->orders()->where('ordered_at', '>=', $start);
+                    $count = (clone $orders)->count();
+                    $revenue = (clone $orders)->sum('total_cents') / 100;
+
+                    return $count ? number_format($count).' orders · '.number_format($revenue, 2).' revenue' : 'None yet';
+                })
+                ->helperText('Counted from Shopify\'s orders/create webhook — needs the app installed through Shopify.'),
             TextEntry::make('pricing')
                 ->label('Pricing')
                 ->state($tiers)

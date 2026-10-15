@@ -1,0 +1,25 @@
+{%- comment -%}
+  Checkout Capture app embed. The app writes app.metafields.checkout_capture.config
+  ({"key": public key, "api": app URL}) on install, so nothing is pasted into the theme.
+  Skipped in the theme editor so the popup never hijacks clicks while editing.
+  assets/checkout-capture.js is a copy of public/js/checkout-capture.js —
+  refresh it with `php artisan shopify:sync-extension` before `shopify app deploy`.
+{%- endcomment -%}
+{%- assign cc_config = app.metafields.checkout_capture.config.value -%}
+{%- if cc_config.key != blank and request.design_mode == false -%}
+  <script
+    src="{{ 'checkout-capture.js' | asset_url }}"
+    data-key="{{ cc_config.key | escape }}"
+    data-api="{{ cc_config.api | escape }}"
+    {%- if customer %} data-customer-email="{{ customer.email | escape }}"{% endif %}
+    defer
+  ></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Checkout Capture",
+  "target": "body",
+  "settings": []
+}
+{% endschema %}

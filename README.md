@@ -104,7 +104,28 @@ On every boot, `docker/start.sh` does the following:
 
 If a deploy fails its health check, Railway keeps serving the previous one.
 
-## Installing on a Shopify store
+## Shopify app
+
+The app installs through Shopify. Merchants manage it from inside Shopify admin, and the operator admin (`/admin`, Filament) sees every shop.
+
+| Piece | Where |
+|---|---|
+| App config | `shopify.app.toml`: scopes, webhooks, `application_url` = `APP_URL/shopify` |
+| Install | Shopify-managed install with token exchange. The first embedded API call (`AuthenticateShopifySession`) verifies the App Bridge ID token, exchanges it for an expiring offline token (1 hour, 90-day refresh), and runs `ShopInstaller`: shop name and domains, a Storefront API token, and the `checkout_capture.config` app metafield the theme embed reads. |
+| Merchant UI | `resources/views/shopify/*`: Home (setup checklist, usage, plan), Settings, Leads, Abandoned carts. Built with Polaris web components and App Bridge from Shopify's CDN. The pages are static shells, and their data comes from `/api/shopify/app/*` over `fetch()`, signed by App Bridge. |
+| Storefront | Theme app extension `extensions/checkout-capture`: an app embed that loads the widget from Shopify's CDN with the key from the app metafield. Run `php artisan shopify:sync-extension` after changing `public/js/checkout-capture.js`; a test fails if you forget. |
+| Billing | `App\Services\Shopify\Billing`: one usage subscription capped at $25 (Billing API). The first 50 checkouts of each 30-day cycle are free. Past 50, a $14 usage record is created; past 1,000, an $11 top-up. Each charge is idempotent. Without an approved plan, the widget steps aside once the free 50 are used and checkout keeps working. Charges are test charges while `SHOPIFY_BILLING_TEST=true`. |
+| Webhooks | `/api/shopify/webhooks` (HMAC-verified). `app/uninstalled` drops the token and turns the widget off. `orders/create` records "orders received" with revenue. `customers/data_request`, `customers/redact` and `shop/redact` cover GDPR. |
+| Shopify Flow | Trigger extension `extensions/cart-abandoned-trigger`. Each abandoned cart fires "Cart abandoned" with a customer reference, so Shopify Email automations can send. The customer is found by email, or created and subscribed only if they opted in. |
+
+**Going live**
+1. In the Partner Dashboard, create the app and copy its Client ID and secret into Railway as `SHOPIFY_API_KEY` and `SHOPIFY_API_SECRET`.
+2. Put the Client ID in `shopify.app.toml`, then run `npm i -g @shopify/cli` and `shopify app deploy`. This pushes the config, the theme extension and the Flow trigger; the Laravel app itself deploys to Railway.
+3. Install on a development store from the Partner Dashboard, open the app, and turn on the app embed (the Home page links to the theme editor).
+4. Request protected customer data access (Level 2: name, email, phone) in the Partner Dashboard. Orders and customers need it outside dev stores.
+5. Before submitting to the App Store, set `SHOPIFY_BILLING_TEST=false`.
+
+## Installing on a Shopify store (manual, without the app)
 
 1. In `/admin` → Shops → New, enter the myshopify domain and the storefront domains, for example `mystore.co.il` and `www.mystore.co.il`. Add `*.shopifypreview.com` if you want theme previews to work.
 2. Optional, but recommended: add a public **Storefront API token** with the `unauthenticated_write_checkouts` scope. You can create one with the Headless channel. Without the token, the email is still saved on the cart attributes but is not prefilled in checkout.

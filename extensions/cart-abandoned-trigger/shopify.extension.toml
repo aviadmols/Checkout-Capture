@@ -1,0 +1,39 @@
+# Shopify Flow trigger fired by the app (flowTriggerReceive) when a recognised shopper's
+# cart goes idle. Payload keys must match App\Services\Shopify\FlowTrigger.
+# The handle can't change after the first deploy.
+[[extensions]]
+name = "Cart abandoned"
+type = "flow_trigger"
+handle = "cart-abandoned"
+description = "A shopper Checkout Capture recognised (from a link, the popup or a store form) left products in the cart without heading to checkout."
+
+  [settings]
+
+    [[settings.fields]]
+    type = "customer_reference"
+
+    [[settings.fields]]
+    type = "email"
+    key = "Customer email"
+
+    [[settings.fields]]
+    type = "url"
+    key = "Recovery url"
+    description = "Rebuilds the cart and opens checkout with the email filled in"
+
+    [[settings.fields]]
+    type = "number_decimal"
+    key = "Cart total"
+
+    [[settings.fields]]
+    type = "single_line_text_field"
+    key = "Currency"
+
+    [[settings.fields]]
+    type = "single_line_text_field"
+    key = "Products"
+
+    [[settings.fields]]
+    type = "single_line_text_field"
+    key = "Source"
+    description = "How the shopper was recognised: url, popup, form or customer"

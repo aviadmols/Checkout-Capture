@@ -3,7 +3,10 @@
 namespace App\Models;
 
 use App\Support\UsagePlan;
+use Carbon\CarbonInterface;
 use Database\Factories\ShopFactory;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +14,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'shop_domain', 'allowed_origins', 'public_key', 'storefront_access_token', 'webhook_url', 'webhook_secret', 'mode', 'settings'])]
+#[Fillable([
+    'name', 'shop_domain', 'allowed_origins', 'public_key', 'storefront_access_token', 'webhook_url', 'webhook_secret', 'mode', 'settings',
+    'shopify_access_token', 'shopify_token_expires_at', 'shopify_refresh_token', 'shopify_refresh_expires_at',
+    'shopify_scopes', 'widget_seen_at', 'installed_at', 'uninstalled_at',
+    'billing_subscription_id', 'billing_line_item_id', 'billing_status', 'billing_cycle_anchor',
+])]
+#[Hidden(['shopify_access_token', 'shopify_refresh_token', 'webhook_secret'])]
 class Shop extends Model
 {
     /** @use HasFactory<ShopFactory> */
@@ -118,6 +127,14 @@ class Shop extends Model
         return [
             'allowed_origins' => 'array',
             'settings' => 'array',
+            'shopify_access_token' => 'encrypted',
+            'shopify_refresh_token' => 'encrypted',
+            'shopify_token_expires_at' => 'datetime',
+            'shopify_refresh_expires_at' => 'datetime',
+            'widget_seen_at' => 'datetime',
+            'installed_at' => 'datetime',
+            'uninstalled_at' => 'datetime',
+            'billing_cycle_anchor' => 'datetime',
         ];
     }
 
@@ -175,9 +192,53 @@ class Shop extends Model
         return $this->hasMany(TrackedCart::class);
     }
 
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function usageCharges(): HasMany
+    {
+        return $this->hasMany(UsageCharge::class);
+    }
+
     public function activationCount(?string $period = null): int
     {
-        return $this->activations()->where('period', $period ?? UsagePlan::period())->count();
+        return $this->activations()->where('period', $period ?? $this->periodFor())->count();
+    }
+
+    /** Installed through Shopify (has an Admin API token), as opposed to set up by hand. */
+    public function isInstalled(): bool
+    {
+        return filled($this->shopify_access_token) && $this->uninstalled_at === null;
+    }
+
+    /**
+     * Usage period containing $at. Shops billed through Shopify follow their 30-day
+     * billing cycle ("2026-10-15" = cycle start) so usage charges land in the cycle
+     * they belong to; everyone else uses calendar months ("2026-10").
+     */
+    public function periodFor(?CarbonInterface $at = null): string
+    {
+        $at ??= now();
+
+        if (! $this->billing_cycle_anchor) {
+            return UsagePlan::period($at);
+        }
+
+        $cycles = (int) floor($this->billing_cycle_anchor->diffInSeconds($at, false) / (30 * 86400));
+
+        return $this->billing_cycle_anchor->copy()->addDays($cycles * 30)->format('Y-m-d');
+    }
+
+    /** The period before the one containing $at. */
+    public function previousPeriod(?CarbonInterface $at = null): string
+    {
+        $at ??= now();
+
+        return $this->billing_cycle_anchor
+            ? $this->periodFor(Carbon::parse($this->periodFor($at))->subDay())
+            : UsagePlan::period($at->copy()->subMonthNoOverflow());
     }
 
     public function isOff(): bool

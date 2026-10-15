@@ -4,7 +4,6 @@ namespace App\Filament\Resources\Shops\Tables;
 
 use App\Models\Shop;
 use App\Support\UsagePlan;
-use Illuminate\Database\Eloquent\Builder;
 use Filament\Actions\EditAction;
 use Filament\Support\Enums\FontFamily;
 use Filament\Tables\Columns\TextColumn;
@@ -30,16 +29,28 @@ class ShopsTable
                     ->label('Captures')
                     ->counts('captures')
                     ->sortable(),
-                TextColumn::make('activations_count')
-                    ->label('Checkouts this month')
-                    ->counts(['activations' => fn (Builder $query) => $query->where('period', UsagePlan::period())])
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('checkouts_this_period')
+                    ->label('Checkouts this period')
+                    ->state(fn (Shop $record) => $record->activationCount())
+                    ->numeric(),
                 TextColumn::make('plan')
                     ->label('Plan')
-                    ->state(fn (Shop $record) => UsagePlan::label((int) $record->activations_count))
+                    ->state(fn (Shop $record) => UsagePlan::label($record->activationCount()))
                     ->badge()
-                    ->color(fn (Shop $record) => UsagePlan::forActivations((int) $record->activations_count)['price'] ? 'warning' : 'gray'),
+                    ->color(fn (Shop $record) => UsagePlan::forActivations($record->activationCount())['price'] ? 'warning' : 'gray'),
+                TextColumn::make('installed_at')
+                    ->label('Shopify app')
+                    ->state(fn (Shop $record) => match (true) {
+                        $record->isInstalled() => 'Installed',
+                        $record->uninstalled_at !== null => 'Uninstalled',
+                        default => 'Manual',
+                    })
+                    ->badge()
+                    ->color(fn (string $state) => match ($state) {
+                        'Installed' => 'success',
+                        'Uninstalled' => 'danger',
+                        default => 'gray',
+                    }),
                 TextColumn::make('mode')
                     ->badge()
                     ->formatStateUsing(fn (string $state) => match ($state) {

@@ -33,6 +33,8 @@ class AppServiceProvider extends ServiceProvider
             Limit::perDay(100)->by('ip-day:'.$request->ip()),
         ]);
 
+        RateLimiter::for('shopify-app', fn (Request $request) => Limit::perMinute(120)->by('shopify-app:'.$request->ip()));
+
         RateLimiter::for('carts', fn (Request $request) => Limit::perMinute(30)->by('ip:'.$request->ip()));
 
         RateLimiter::for('widget-config', fn (Request $request) => Limit::perMinute(120)->by($request->ip()));

@@ -1,0 +1,35 @@
+# Shopify app configuration — link it to the app you created in the Partner Dashboard:
+#   shopify app config link --client-id <CLIENT_ID>
+# then deploy the config + extensions (the Laravel app itself deploys to Railway):
+#   php artisan shopify:sync-extension && shopify app deploy
+client_id = "REPLACE_WITH_CLIENT_ID"
+name = "Checkout Capture"
+handle = "checkout-capture"
+application_url = "https://checkout-capture-production.up.railway.app/shopify"
+embedded = true
+
+[access_scopes]
+# Must match SHOPIFY_SCOPES in the Laravel app.
+scopes = "read_orders,read_customers,write_customers,unauthenticated_read_product_listings,unauthenticated_read_checkouts,unauthenticated_write_checkouts"
+use_legacy_install_flow = false
+
+[auth]
+# Shopify-managed install + token exchange never redirects here; the field is required.
+redirect_urls = ["https://checkout-capture-production.up.railway.app/shopify"]
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  topics = ["app/uninstalled", "orders/create"]
+  uri = "https://checkout-capture-production.up.railway.app/api/shopify/webhooks"
+
+  [[webhooks.subscriptions]]
+  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+  uri = "https://checkout-capture-production.up.railway.app/api/shopify/webhooks"
+
+[pos]
+embedded = false
+
+[build]
+include_config_on_deploy = true
