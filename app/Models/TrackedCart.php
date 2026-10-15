@@ -32,6 +32,7 @@ class TrackedCart extends Model
             'item_count' => 'integer',
             'last_activity_at' => 'datetime',
             'abandoned_at' => 'datetime',
+            'webhook_attempted_at' => 'datetime',
         ];
     }
 

@@ -4,8 +4,10 @@ namespace App\Filament\Resources\Shops\Pages;
 
 use App\Filament\Resources\Shops\ShopResource;
 use App\Models\Shop;
+use App\Services\AbandonedCartWebhook;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Icons\Heroicon;
 
@@ -24,6 +26,20 @@ class EditShop extends EditRecord
                 ->icon(Heroicon::OutlinedEye)
                 ->color('gray')
                 ->url(fn () => route('shops.preview', $this->record), shouldOpenInNewTab: true),
+            Action::make('testWebhook')
+                ->label('Send test webhook')
+                ->icon(Heroicon::OutlinedPaperAirplane)
+                ->color('gray')
+                ->visible(fn () => filled($this->record->webhook_url))
+                ->action(function (AbandonedCartWebhook $webhook) {
+                    $result = $webhook->sendTest($this->record);
+
+                    Notification::make()
+                        ->title($result['ok'] ? 'Test webhook delivered' : 'Test webhook failed')
+                        ->body($result['ok'] ? "HTTP {$result['status']}" : ($result['status'] ? "HTTP {$result['status']}: " : '').$result['error'])
+                        ->status($result['ok'] ? 'success' : 'danger')
+                        ->send();
+                }),
             DeleteAction::make(),
         ];
     }
@@ -33,7 +49,7 @@ class EditShop extends EditRecord
     {
         // Filament applies ->default() only on create; toggles and pickers would otherwise
         // show empty/off for keys this shop never saved, and saving would flip them.
-        foreach (['design', 'direction', 'accent_color', 'url_capture', 'form_capture', 'abandoned_carts', 'allow_skip'] as $key) {
+        foreach (['design', 'direction', 'accent_color', 'url_capture', 'form_capture', 'abandoned_carts', 'identify_marketing_apps', 'allow_skip'] as $key) {
             $data['settings'][$key] ??= Shop::DEFAULT_SETTINGS[$key];
         }
 

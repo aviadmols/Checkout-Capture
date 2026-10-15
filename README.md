@@ -20,7 +20,35 @@ Each shop chooses **how it works** (Shops → Store tab):
 The shopper is also recognised in two more ways, each one a per-shop toggle under **Recognising shoppers**:
 
 - **Store forms (off by default):** an email typed into one of the store's own forms (newsletter, contact, account) is picked up when the field changes or the form is submitted. Lead source: `form`.
-- **Abandoned carts (off by default):** when a shopper we know (from a link, the popup or a store form) has products in the cart and stays idle for the shop's set time (default 30 minutes) without heading to checkout, the cart is marked abandoned. The widget reports cart changes (`/cart/add`, `/cart/change`, …) and page views to `POST /api/v1/carts`. The scheduler (`carts:detect-abandoned`, every minute) marks idle carts and fires a `CartAbandoned` event. **Abandoned carts** in the admin lists them with a recovery link: a Shopify cart permalink that rebuilds the cart and opens checkout with the email filled in. Shopify only creates its own abandoned checkout when a shopper reaches checkout, so these carts are tracked here. Sending the recovery message is not wired yet.
+- **Abandoned carts (off by default):** when a shopper we know (from a link, the popup or a store form) has products in the cart and stays idle for the shop's set time (default 30 minutes) without heading to checkout, the cart is marked abandoned. The widget reports cart changes (`/cart/add`, `/cart/change`, …) and page views to `POST /api/v1/carts`. The scheduler (`carts:detect-abandoned`, every minute) marks idle carts and fires a `CartAbandoned` event. **Abandoned carts** in the admin lists them with a recovery link: a Shopify cart permalink that rebuilds the cart and opens checkout with the email filled in. Shopify only creates its own abandoned checkout when a shopper reaches checkout, so these carts are tracked here.
+
+**We never message shoppers ourselves.** An abandoned cart is handed off in two ways:
+
+1. **Webhook (per shop):** each abandoned cart is POSTed once to the shop's webhook URL, so the shop's own tools can send the recovery message (n8n, Make, Zapier, an ESP). Requests carry `X-Checkout-Capture-Event: cart.abandoned` and `X-Checkout-Capture-Signature: sha256=<HMAC-SHA256 of the raw body with the shop's secret>`. The secret is shown in the Install tab. Delivery status is visible on **Abandoned carts**, which has a **Resend webhook** action. The shop page has a **Send test webhook** button (event `test`).
+2. **Marketing apps on the page (toggle "Identify recognised shoppers to Klaviyo / Omnisend"):** the widget calls `klaviyo.identify({email})` / `omnisend.identifyContact({email})` for shoppers recognised from a link or a store form. Klaviyo and Omnisend then attribute their own cart activity to that profile, and their abandoned-cart flows send. Klaviyo may skip onsite events for EU/UK visitors who haven't consented.
+
+Webhook body:
+
+```json
+{
+  "event": "cart.abandoned",
+  "id": 42,
+  "shop": { "name": "Mills IL", "myshopify_domain": "mills.myshopify.com", "storefront_domain": "mills.co.il" },
+  "customer": { "email": "dana@example.com", "first_name": "Dana", "last_name": "Cohen", "phone": null, "accepts_marketing": true, "accepts_sms": false },
+  "source": "url",
+  "cart": {
+    "token": "c1-…", "currency": "ILS", "total_price": 258, "total_price_cents": 25800, "item_count": 2,
+    "items": [{ "variant_id": 4410, "product_title": "Shake", "variant_title": "Chocolate", "quantity": 2, "price": 129 }]
+  },
+  "recovery_url": "https://mills.co.il/cart/4410:2?checkout%5Bemail%5D=dana%40example.com",
+  "last_activity_at": "2026-10-15T10:00:00+00:00",
+  "abandoned_at": "2026-10-15T10:30:00+00:00"
+}
+```
+
+Check `customer.accepts_marketing` / `accepts_sms` before sending a marketing message.
+
+Planned once the app installs through Shopify (OAuth): a **Shopify Flow trigger** ("Cart abandoned"), so Shopify's own automations can act on these carts without a webhook.
 
 Known details are kept in localStorage and in a first-party cookie (`cc_details`, 180 days, SameSite=Lax), so a shopper is still recognised after localStorage is cleared.
 

@@ -4,7 +4,10 @@ namespace App\Filament\Resources\TrackedCarts;
 
 use App\Filament\Resources\TrackedCarts\Pages\ListTrackedCarts;
 use App\Models\TrackedCart;
+use App\Services\AbandonedCartWebhook;
 use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\Enums\FontFamily;
 use Filament\Support\Icons\Heroicon;
@@ -61,6 +64,13 @@ class TrackedCartResource extends Resource
                 TextColumn::make('shop.name')->label('Shop')->toggleable(),
                 TextColumn::make('last_activity_at')->label('Last activity')->since()->dateTimeTooltip()->sortable(),
                 TextColumn::make('abandoned_at')->label('Abandoned')->since()->dateTimeTooltip()->sortable()->placeholder('—'),
+                TextColumn::make('webhook_status')
+                    ->label('Webhook')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state) => $state ? ucfirst($state) : null)
+                    ->color(fn (?string $state) => $state === 'sent' ? 'success' : 'danger')
+                    ->tooltip(fn (TrackedCart $record) => $record->webhook_error ?: ($record->webhook_response_code ? "HTTP {$record->webhook_response_code}" : null))
+                    ->placeholder('—'),
                 TextColumn::make('recovery_url')
                     ->label('Recovery link')
                     ->state(fn (TrackedCart $record) => $record->recoveryUrl())
@@ -79,6 +89,21 @@ class TrackedCartResource extends Resource
                     ])
                     ->default(TrackedCart::ABANDONED),
                 SelectFilter::make('shop')->relationship('shop', 'name'),
+            ])
+            ->recordActions([
+                Action::make('resendWebhook')
+                    ->label('Resend webhook')
+                    ->icon(Heroicon::OutlinedArrowPath)
+                    ->visible(fn (TrackedCart $record) => $record->status === TrackedCart::ABANDONED && filled($record->shop?->webhook_url))
+                    ->action(function (TrackedCart $record, AbandonedCartWebhook $webhook) {
+                        $ok = $webhook->deliver($record);
+
+                        Notification::make()
+                            ->title($ok ? 'Webhook delivered' : 'Webhook failed')
+                            ->body($ok ? null : $record->webhook_error)
+                            ->status($ok ? 'success' : 'danger')
+                            ->send();
+                    }),
             ]);
     }
 

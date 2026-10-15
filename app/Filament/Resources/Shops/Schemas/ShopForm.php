@@ -116,6 +116,20 @@ class ShopForm
                         ->maxValue(1440)
                         ->placeholder((string) $d['abandon_after_minutes'])
                         ->visible(fn (Get $get) => (bool) $get('settings.abandoned_carts')),
+                    TextInput::make('webhook_url')
+                        ->label('Send abandoned carts to (webhook URL)')
+                        ->placeholder('https://hooks.example.com/abandoned-cart')
+                        ->url()
+                        ->rule('starts_with:https://')
+                        ->maxLength(2048)
+                        ->helperText('Each abandoned cart is POSTed here as JSON — customer, products and a recovery link — signed with the secret in the Install tab. Your own tool (n8n, Make, Zapier, your ESP) sends the message; Checkout Capture never emails shoppers.')
+                        ->visible(fn (Get $get) => (bool) $get('settings.abandoned_carts'))
+                        ->columnSpanFull(),
+                    Toggle::make('settings.identify_marketing_apps')
+                        ->label('Identify recognised shoppers to Klaviyo / Omnisend')
+                        ->helperText('If the store runs Klaviyo or Omnisend, they are told the shopper\'s email, so their own abandoned-cart flows (Added to Cart, Started Checkout) can send for shoppers who came from a link or a store form.')
+                        ->default($d['identify_marketing_apps'])
+                        ->columnSpanFull(),
                 ]),
             TagsInput::make('allowed_origins')
                 ->label('Storefront domains')
@@ -244,6 +258,13 @@ class ShopForm
                 ->state(fn (?Shop $record) => $record ? self::snippet($record) : null)
                 ->fontFamily(FontFamily::Mono)
                 ->copyable()
+                ->columnSpanFull(),
+            TextEntry::make('webhook_secret')
+                ->label('Webhook signing secret')
+                ->helperText('Verify requests: X-Checkout-Capture-Signature = "sha256=" + HMAC-SHA256(raw body, this secret).')
+                ->fontFamily(FontFamily::Mono)
+                ->copyable()
+                ->visible(fn (?Shop $record) => filled($record?->webhook_url))
                 ->columnSpanFull(),
             TextEntry::make('campaign_link')
                 ->label('Campaign link — the email is read from it and attached at checkout')

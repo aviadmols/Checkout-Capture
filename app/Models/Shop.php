@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'shop_domain', 'allowed_origins', 'public_key', 'storefront_access_token', 'mode', 'settings'])]
+#[Fillable(['name', 'shop_domain', 'allowed_origins', 'public_key', 'storefront_access_token', 'webhook_url', 'webhook_secret', 'mode', 'settings'])]
 class Shop extends Model
 {
     /** @use HasFactory<ShopFactory> */
@@ -106,6 +106,9 @@ class Shop extends Model
         // Mark carts of identified shoppers as abandoned after this many idle minutes.
         'abandoned_carts' => false,
         'abandon_after_minutes' => 30,
+        // Tell marketing apps on the page (Klaviyo, Omnisend) who the shopper is, so their own
+        // abandoned-cart flows can run for shoppers we recognised.
+        'identify_marketing_apps' => false,
         'accent_color' => '#000000',
         'extra_selectors' => '',
     ];
@@ -127,6 +130,10 @@ class Shop extends Model
 
         static::saving(function (Shop $shop) {
             $shop->shop_domain = static::normalizeHost($shop->shop_domain);
+
+            if ($shop->webhook_url && ! $shop->webhook_secret) {
+                $shop->webhook_secret = Str::random(40);
+            }
         });
     }
 

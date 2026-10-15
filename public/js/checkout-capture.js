@@ -59,6 +59,7 @@
     url_param: 'email',
     form_capture: false,
     abandoned_carts: false,
+    identify_marketing_apps: false,
     accent_color: '#000000',
     extra_selectors: '',
     fields: [
@@ -196,6 +197,7 @@
     if (!PREVIEW) {
       storage.set(STORAGE_KEY, record);
       cookie.set(record);
+      identifyMarketingApps(record);
     }
     return record;
   }
@@ -204,6 +206,37 @@
   const apiSource = (d) => (['url', 'form'].includes(d.source) ? d.source : 'popup');
 
   const displayName = (d) => d.name || [d.firstName, d.lastName].filter(Boolean).join(' ') || null;
+
+  /* ------------------------------------------------------- marketing apps */
+
+  const identifiedIn = new Set();
+
+  /**
+   * Klaviyo and Omnisend run their own abandoned-cart flows, but only for shoppers they
+   * can identify. Telling them the email we recognised lets their flows send — we never
+   * message shoppers ourselves. Omnisend's API only exists once its script has loaded,
+   * so this is called again after page load.
+   */
+  function identifyMarketingApps(details) {
+    if (PREVIEW || !details || details.source === 'customer') return;
+    if (!state.config.enabled || !settings().identify_marketing_apps) return;
+
+    const email = details.email;
+    const once = (app, call) => {
+      if (identifiedIn.has(`${app}:${email}`)) return;
+      try { if (call()) identifiedIn.add(`${app}:${email}`); } catch (e) { /* app script error */ }
+    };
+
+    once('klaviyo', () => {
+      if (window.klaviyo && typeof window.klaviyo.identify === 'function') { window.klaviyo.identify({ email }); return true; }
+      if (window._learnq && typeof window._learnq.push === 'function') { window._learnq.push(['identify', { $email: email }]); return true; }
+      return false;
+    });
+    once('omnisend', () => {
+      if (window.omnisend && typeof window.omnisend.identifyContact === 'function') { window.omnisend.identifyContact({ email }); return true; }
+      return false;
+    });
+  }
 
   /* ------------------------------------------------------------- shopify */
 
@@ -928,7 +961,13 @@
   state.configReady
     .then(captureFromUrl)
     .catch((error) => console.warn('[CheckoutCapture] link email not captured.', error))
-    .then(() => trackCart(0));
+    .then(() => {
+      trackCart(0);
+      identifyMarketingApps(knownDetails());
+    });
+
+  // Marketing app scripts often load after this one.
+  window.addEventListener('load', () => setTimeout(() => identifyMarketingApps(knownDetails()), 3000));
 
   if (!PREVIEW) {
     window.addEventListener('click', onClick, true);
@@ -947,7 +986,7 @@
   });
 
   window.CheckoutCapture = {
-    version: '1.3.0',
+    version: '1.4.0',
     /** For themes that start checkout from JS: `await CheckoutCapture.ensure()` before redirecting. */
     async ensure() {
       await withTimeout(state.configReady, 1500).catch(noop);
