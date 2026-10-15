@@ -1,0 +1,15 @@
+{
+	frankenphp
+	admin off
+	auto_https off
+}
+
+:{$PORT:8080} {
+	root * /app/public
+	encode zstd br gzip
+
+	# Stores load the widget on every page; a short cache keeps updates quick to roll out.
+	header /js/checkout-capture.js Cache-Control "public, max-age=300"
+
+	php_server
+}
