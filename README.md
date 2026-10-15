@@ -36,6 +36,25 @@ php artisan serve
 - Mock storefront: http://localhost:8000/demo. This is a fake Shopify cart, `/cart.js`, `/checkout` and Storefront API, loaded only when `APP_ENV=local`. Use it to try the whole flow without a store.
 - Tests: `php artisan test`
 
+## Deployment (Railway)
+
+Production: https://checkout-capture-production.up.railway.app (Railway project `mellow-purpose`, environment `production`).
+
+| Service | Source | Notes |
+|---|---|---|
+| Checkout-Capture | GitHub `aviadmols/Checkout-Capture`, branch `main` | Builds from the `Dockerfile` (FrankenPHP, PHP 8.4). Health check `/up`. Every push to `main` deploys. |
+| Postgres | Railway Postgres template | Has a volume. No public domain. |
+
+Variables on Checkout-Capture: `APP_KEY`, `APP_URL`, `APP_ENV=production`, `APP_DEBUG=false`, `DB_CONNECTION=pgsql`, `DB_URL=${{Postgres.DATABASE_URL}}`, `LOG_CHANNEL=stderr`, `SESSION_SECURE_COOKIE=true`, `PORT=8080`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
+
+On every boot, `docker/start.sh` does the following:
+1. Builds the config, route and view caches.
+2. Runs migrations, retrying up to 10 times.
+3. Creates the admin from `ADMIN_EMAIL` / `ADMIN_PASSWORD` if that user doesn't exist yet. It never resets an existing password.
+4. Starts FrankenPHP on `$PORT`.
+
+If a deploy fails its health check, Railway keeps serving the previous one.
+
 ## Installing on a Shopify store
 
 1. In `/admin` → Shops → New, enter the myshopify domain and the storefront domains, for example `mystore.co.il` and `www.mystore.co.il`. Add `*.shopifypreview.com` if you want theme previews to work.
