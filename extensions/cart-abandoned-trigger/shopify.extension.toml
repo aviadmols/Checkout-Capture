@@ -5,6 +5,7 @@
 name = "Cart abandoned"
 type = "flow_trigger"
 handle = "cart-abandoned"
+uid = "adf3c768-cba4-a0d9-1348-62c813997ef0ac2317e0"
 description = "A shopper Checkout Capture recognised (from a link, the popup or a store form) left products in the cart without heading to checkout."
 
   [settings]
